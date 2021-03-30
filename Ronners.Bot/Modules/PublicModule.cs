@@ -210,7 +210,7 @@ namespace Ronners.Bot.Modules
         [Command("source")]
         public async Task RonnerSource()
         {
-            await ReplyAsync("https://youtu.be/YjZJ9o3tVv0");
+            await ReplyAsync("https://github.com/GzusO/Ronners");
         }
 
         [Command("points")]
