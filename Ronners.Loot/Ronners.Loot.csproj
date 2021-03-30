@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>library</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+ <ItemGroup>
+    <None Include="$(SolutionDir)TestData\**" CopyToOutputDirectory="PreserveNewest" LinkBase="TestData\"/>
+  </ItemGroup>
+</Project>
