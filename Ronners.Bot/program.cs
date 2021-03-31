@@ -49,9 +49,9 @@ namespace Ronners.Bot
                 _discord.MessageReceived += services.GetRequiredService<ImageService>().MessageReceivedAsync;
                 services.GetRequiredService<CommandService>().Log += LogAsync;
                 services.GetRequiredService<GameService>().connection = connection;
-                // Tokens should be considered secret data and never hard-coded.
-                // We can read from the environment variable to avoid hardcoding.
-                await _discord.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DiscordToken"));
+                
+                //Load discord key from Config Service
+                await _discord.LoginAsync(TokenType.Bot, ConfigService.Config.DiscordKey);
                 await _discord.StartAsync();
                 
                 // Here we initialize the logic required to register our commands.

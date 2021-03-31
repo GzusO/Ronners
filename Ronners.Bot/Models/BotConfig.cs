@@ -5,6 +5,9 @@ namespace Ronners.Bot.Models
 {    
     public class BotConfig    
     {
+        [JsonPropertyName("Discord Key")]
+        public string DiscordKey{get;set;}
+        
         [JsonPropertyName("IEX Key")]
         public string IEXKey { get; set; }
 

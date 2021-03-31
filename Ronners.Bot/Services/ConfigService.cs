@@ -33,6 +33,7 @@ namespace Ronners.Bot
 
         private static BotConfig GenerateBaseConfig() => new BotConfig
         {
+            DiscordKey = "Discord KEy Here",
             IEXKey ="INSERT KEY HERE",
             CaptchaFolder= "Captcha",
             ImgFolder = "Img",
