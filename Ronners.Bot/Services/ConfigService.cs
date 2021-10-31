@@ -40,7 +40,8 @@ namespace Ronners.Bot
             AudioFolder ="Audio",
             CommandPrefix = '!',
             WhitelistedChannel = new List<ulong>(){1234,5678},
-            DatabaseConnection ="Data Source=sample.db;"
+            DatabaseConnection ="Data Source=sample.db;",
+            StockJson = "ronStock.json"
         };
 
     }

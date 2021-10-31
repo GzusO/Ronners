@@ -6,3 +6,5 @@
 **/Captcha
 *.code-workspace
 *.db
+Ronners.Bot/config.json
+Ronners.Bot/ronStock.json

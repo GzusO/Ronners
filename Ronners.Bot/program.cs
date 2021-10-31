@@ -20,6 +20,8 @@ namespace Ronners.Bot
         private DiscordSocketClient _discord;
         private GameService gameService;
 
+        private Timer stockTimer;
+
         static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
 
@@ -36,6 +38,7 @@ namespace Ronners.Bot
             connection.Open();
             InitializeDB(connection,newDb);
 
+            
 
             using (var services = ConfigureServices())
             {
@@ -47,9 +50,12 @@ namespace Ronners.Bot
                 _discord.Log += LogAsync;
                 _discord.Ready += ReadyAsync;
                 _discord.MessageReceived += services.GetRequiredService<ImageService>().MessageReceivedAsync;
+                _discord.MessageReceived += services.GetRequiredService<MarkovService>().MessageReceiveAsync;
                 services.GetRequiredService<CommandService>().Log += LogAsync;
                 services.GetRequiredService<GameService>().connection = connection;
                 
+                
+                stockTimer = new Timer(services.GetRequiredService<RonStockMarketService>().RefreshMarket,null,(int)TimeSpan.FromMinutes(1).TotalMilliseconds,(int)TimeSpan.FromMinutes(1).TotalMilliseconds);
                 //Load discord key from Config Service
                 await _discord.LoginAsync(TokenType.Bot, ConfigService.Config.DiscordKey);
                 await _discord.StartAsync();
@@ -59,6 +65,7 @@ namespace Ronners.Bot
                 await services.GetRequiredService<HangmanService>().InitializeAsync();
                 await services.GetRequiredService<ReactionService>().InitializeAsync();
                 await services.GetRequiredService<CaptchaService>().InitializeAsync();
+                await services.GetRequiredService<RonStockMarketService>().InitializeAsync(ConfigService.Config.StockJson);
 
                 await Task.Delay(Timeout.Infinite);
             }
@@ -84,6 +91,7 @@ namespace Ronners.Bot
             string cmdTextUserAchievements = @"CREATE TABLE userachievements(UserAchievementId INTEGER PRIMARY KEY, UserID INTEGER, AchievementID INTEGER)";
             string cmdTextAchievementMessages =@"CREATE TABLE achievementmessages(AchievementMessageId INTEGER PRIMARY KEY, AchievementType INTEGER, IntValue INTEGER, StringValue TEXT, BoolValue INTEGER, DoubleValue REAL, UserID INTEGER)";
             string cmdInsertAchievement = @"INSERT INTO achievements(AchievementId,Name,Description,Score) VALUES(@achievementId,@name,@description,@score)";
+            string cmdTextUserRonStock = @"CREATE TABLE userronstock(userid INTEGER, symbol TEXT, quantity INTEGER)";
 
             SqliteCommand cmd;
             if(newDb)
@@ -165,6 +173,21 @@ namespace Ronners.Bot
                 cmd = new SqliteCommand(string.Format(cmdTextVersionUpdate,++version),conn);
                 cmd.ExecuteNonQuery();
             }
+            if(version < 9)
+            {
+                conn.Execute(cmdInsertAchievement, new{achievementId=9,name="Slurp God",description="Slurped 100 times.",score=10});
+
+                cmd = new SqliteCommand(string.Format(cmdTextVersionUpdate,++version),conn);
+                cmd.ExecuteNonQuery();
+            }
+            if(version < 10)
+            {
+                cmd = new SqliteCommand(cmdTextUserRonStock,conn);
+                cmd.ExecuteNonQuery();
+
+                cmd = new SqliteCommand(string.Format(cmdTextVersionUpdate,++version),conn);
+                cmd.ExecuteNonQuery();
+            }
             cmd = new SqliteCommand(String.Format(cmdTextVersionUpdate,version),conn);
             cmd.ExecuteNonQuery();
         }
@@ -191,12 +214,14 @@ namespace Ronners.Bot
                 .AddSingleton<CaptchaService>()
                 .AddSingleton<HttpClient>()
                 .AddSingleton<ImageService>()
+                .AddSingleton<MarkovService>()
                 .AddSingleton<StockService>()
                 .AddSingleton<GameService>()
                 .AddSingleton<WebService>()
                 .AddSingleton<RouletteService>()
                 .AddSingleton<SlotService>()
-                .AddSingleton<LootGenerator>(_ => new LootGenerator("TestData/"))
+                .AddSingleton<RonStockMarketService>()
+                //.AddSingleton<LootGenerator>(_ => new LootGenerator("TestData/"))
                 .BuildServiceProvider();
         }
 

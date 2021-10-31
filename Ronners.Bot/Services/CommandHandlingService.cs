@@ -42,7 +42,7 @@ namespace Ronners.Bot.Services
             if (!(rawMessage is SocketUserMessage message)) return;
             if (message.Source != MessageSource.User) return;
 
-            await _services.GetRequiredService<GameService>().AddRonPoint(rawMessage.Author);
+            //await _services.GetRequiredService<GameService>().AddRonPoint(rawMessage.Author);
 
             // This value holds the offset where the prefix ends
             var argPos = 0;

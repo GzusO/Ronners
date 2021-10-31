@@ -27,13 +27,13 @@ namespace Ronners.Bot.Modules
                 await ReplyAsync("Unable to find User");
                 return;
             }
-            if(user.RonPoints < betAmount)
+            if(!await GameService.AddRonPoints(Context.User,-1*betAmount))
             {
                 await ReplyAsync("Not Enough Points");
                 return;
             }
 
-            await GameService.AddRonPoints(Context.User,-1*betAmount);
+            
             int winnings;
             Slot slot;
             (winnings,slot) = SlotService.Play(betAmount);

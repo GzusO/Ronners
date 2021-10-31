@@ -32,6 +32,7 @@ namespace Ronners.Bot.Models
         Baccarat,
         Roulette,
         TicTacToe,
-        Captcha
+        Captcha,
+        Slurp
     }
 }

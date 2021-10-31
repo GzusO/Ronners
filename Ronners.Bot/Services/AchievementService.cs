@@ -50,9 +50,19 @@ namespace Ronners.Bot.Services
                 case AchievementType.Captcha:
                     CheckCaptchaAchievements(result);
                     break;
+                case AchievementType.Slurp:
+                    CheckSlurpAchievements(result);
+                    break;
                 default:
                     break;
             }
+        }
+
+        private async void CheckSlurpAchievements(AchievementResult result)
+        {
+            var messages = await _gameService.GetAchievementMessagesByTypeAndUserId((int)AchievementType.Slurp,result.User.Id);
+            if(messages.Count() > 100 )
+                GrantAchievement(9,result.User.Id);
         }
 
         private async void CheckCaptchaAchievements(AchievementResult result)

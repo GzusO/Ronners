@@ -108,33 +108,64 @@ namespace Ronners.Bot.Services
             return await connection.QueryAsync<Retribution>(cmd);
         }
 
-        public async Task AddRonPoint(IUser user)
+        
+        public async Task<IEnumerable<UserRonStock>> GetUserRonStockByUserAsync(IUser user)
         {
-            User caller = await GetUserByID(user.Id);
-            if(caller is null)
-            {
-                await InsertUser(new User(user.Id,user.Username,0,1));
-            }
-            else
-            {
-                caller.RonPoints++;
-                await UpdateUser(caller);
-            }
-            
+            var cmd = "SELECT * FROM userronstock WHERE userid = @id";
+            return await connection.QueryAsync<UserRonStock>(cmd,new{id = user.Id});
         }
-        public async Task AddRonPoints(IUser user, int amount)
+
+        public async Task<UserRonStock> GetUserRonStockAsync(IUser user, string symbol)
+        {
+            var id = user.Id;
+
+            var cmd = string.Format("SELECT * FROM userronstock WHERE userid = @id and symbol = @symbol");
+            return await connection.QueryFirstOrDefaultAsync<UserRonStock>(cmd,new{id,symbol});
+        }
+
+        public async Task UpdateUserRonStock(UserRonStock userRonStock)
+        {
+            var cmd = string.Format("UPDATE userronstock SET quantity = @quantity WHERE userid = @id and symbol = @symbol");
+            await connection.QueryAsync(cmd,new{quantity = userRonStock.Quantity, id = userRonStock.UserID, symbol = userRonStock.Symbol});
+        }
+
+        public async Task DeleteUserRonStock(UserRonStock userRonStock)
+        {
+            //Don't Delete if quantity isn't 0
+            if(userRonStock.Quantity != 0)
+                return;
+
+            var cmd = string.Format("DELETE FROM userronstock WHERE userid = @id and symbol = @symbol");
+            await connection.QueryAsync(cmd,new{quantity = userRonStock.Quantity, id = userRonStock.UserID, symbol = userRonStock.Symbol});
+        }
+        public async Task AddUserRonStock(UserRonStock userRonStock)
+        {
+            var cmd = "INSERT INTO userronstock(userid,symbol,quantity) values(@UserId,@Symbol,@Quantity)";
+            await connection.ExecuteAsync(cmd, new {UserId=userRonStock.UserID, Symbol=userRonStock.Symbol,Quantity = userRonStock.Quantity});
+        }
+
+        public async Task<bool> AddRonPoint(IUser user)
+        {
+            
+            return await AddRonPoints(user,1);
+        }
+        public async Task<bool> AddRonPoints(IUser user, int amount)
         {
             User caller = await GetUserByID(user.Id);
             if(caller is null)
             {
+                if(amount < 0)
+                    return false;
                 await InsertUser(new User(user.Id,user.Username,0,amount));
             }
             else
             {
+                if(amount<0 && amount*-1 > caller.RonPoints)
+                    return false;
                 caller.RonPoints += amount;
                 await UpdateUser(caller);
             }
-            
+            return true;
         }
     }
 }

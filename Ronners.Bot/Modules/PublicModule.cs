@@ -22,9 +22,12 @@ namespace Ronners.Bot.Modules
         public HangmanService HangmanService{get;set;}
         public ReactionService ReactionService{get;set;}
         public Random Rand{get;set;}
-        public LootGenerator LootGen{get;set;}
         public CaptchaService CaptchaService{get;set;}
         public AudioService AudioService{get;set;}
+
+        public MarkovService MarkovService{get;set;}
+
+        public CommandService _commandService {get;set;}
 
         private static string CaptchaPath = Path.Combine(Directory.GetCurrentDirectory(),ConfigService.Config.CaptchaFolder);
 
@@ -39,6 +42,29 @@ namespace Ronners.Bot.Modules
             {"ruler", "ronnersRuler.mp3"}
         };
 
+        [Command("help")]
+        public async Task Help(int page = 1)
+        {
+            if(page < 1)
+                page = 1;
+            var skip = 25*(page-1);
+            List<CommandInfo> commands = _commandService.Commands.Skip(skip).Take(25).ToList();
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            
+
+            foreach (CommandInfo command in commands)
+            {
+                // Get the command Summary attribute information
+                string embedFieldText = command.Summary ?? "No description available\n";
+                embedBuilder.AddField($"{command.Name}", embedFieldText);
+            }
+
+            var commandCount = _commandService.Commands.Count();
+            int pageCount = (commandCount + 24)/ 25;
+
+            await ReplyAsync($"Commands Page [{page}/{pageCount}]: ", false, embedBuilder.Build());
+            
+        }
 
         [Command("achievements")]
         public async Task achievementsAsync(IUser user=null)
@@ -60,7 +86,33 @@ namespace Ronners.Bot.Modules
             await ReplyAsync(response); 
         }
 
+        [Command("markov")]
+        public async Task markovAsync([Remainder] string text = null)
+        {
+            if(text == null)
+                text ="";
+            var response = MarkovService.GenerateMessage(text.ToLowerInvariant().Trim());
 
+            var chance = Rand.Next(0,100);
+            if(Rand.Next(0,100)==0)
+                await ReplyAsync(response.owo());
+            else
+                await ReplyAsync(response);
+        }
+
+        [Command("purge")]
+        public async Task purgeAsync()
+        {
+            if(!await GameService.AddRonPoints(Context.User,-100))
+            {
+                await ReplyAsync("Not Enough Points! Costs 100 RonPoints.");
+                return;
+            }
+
+            MarkovService.Purge();
+            await ReplyAsync("Markov Brain Purged, Ronners!");
+        }
+    
         [Command("best")]
         public async Task bestAsync(int count = 10)
         {
@@ -192,11 +244,6 @@ namespace Ronners.Bot.Modules
             File.Delete(file); //Cleanup
         }
         
-        [Command("loot")]
-        public async Task lootAsync()
-        {
-            await ReplyAsync("",false,BuildEmbed(LootGen.Generate()));
-        }
 
         // Get info on a user, or the user who invoked the command if one is not specified
         [Command("userinfo")]
@@ -251,6 +298,26 @@ namespace Ronners.Bot.Modules
         public async Task changelogAsync()
         {
             string response = "";
+            response += @"2021-10-28 18:48
+- Added !slurp
+    SLURP!
+- Added !markov
+    Ronners Random Text Generation
+- Added !slots
+    Gambling
+- Added !baccarat
+    More Gambling
+- Added !roulette
+    MOAR Gambling
+- Added new Achievements.
+    Goodluck
+- Added !ron
+    Ronners Video.
+- Added !purge 
+    to purge the Markovian Model for 100 RonPoints.
+- Added !help
+    Command List and no descriptions yet.
+";
             response += @"2021-02-02 20:09 pm
 - !draw improved
     c/circle centerX centerY radius - draws circle
@@ -561,6 +628,24 @@ namespace Ronners.Bot.Modules
             return achievementResult;
         }
 
+        [Command("slurp")]
+        public async Task<RuntimeResult> SlurpAsync()
+        {
+            await Context.Channel.SendFileAsync("slurp.mp4","Slurp!");
+
+            var achievementResult = AchievementResult.FromSuccess();
+
+            achievementResult.AchievementType = AchievementType.Slurp;
+            achievementResult.User = Context.User;
+
+            return achievementResult;
+        }
+        [Command("ron")]
+        public async Task RonAsync()
+        {
+            await Context.Channel.SendFileAsync("ron.mp4","Ronners!");
+        }
+
         [Command("Hangman")]
         public async Task HangmanAsync()
         {
@@ -585,7 +670,11 @@ namespace Ronners.Bot.Modules
         [Alias("uwu")]
         public async Task OwOAsync([Remainder]string text)
         {
-            await GameService.AddRonPoints(Context.User,-2);
+            if(!await GameService.AddRonPoints(Context.User,-2))
+            {
+                await ReplyAsync("Not Enough Points! Costs 2 RonPoints.".owo());
+                return;
+            }
             await ReplyAsync(text.owo());
         }
 

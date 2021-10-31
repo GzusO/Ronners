@@ -28,6 +28,11 @@ namespace Ronners.Bot.Models
 
         [JsonPropertyName("Database Connection String")]
         public string DatabaseConnection{get;set;}
+        [JsonPropertyName("Mongo Db Connection String")]
+        public string MongoConnectionString{get;set;}
+
+        [JsonPropertyName("Ron Stock Json File")]
+        public string StockJson{get;set;}
 
     }
 }

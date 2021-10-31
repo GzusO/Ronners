@@ -91,7 +91,8 @@ namespace Ronners.Bot.Services
             "anyone wanna go to sonic?",
             "notice me senpai",
             "worm sign",
-            "deluxe stroganoff"
+            "deluxe stroganoff",
+            "bogos binted"
         };
         private readonly DiscordSocketClient _discord;
         private readonly IServiceProvider _services;
