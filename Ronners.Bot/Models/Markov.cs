@@ -1,7 +1,9 @@
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 
 namespace Ronners.Bot.Models
 {
@@ -9,10 +11,18 @@ namespace Ronners.Bot.Models
     {
         Dictionary<string,Dictionary<string,int>> Chain;
         System.Random _random;
-        public Markov()
+
+        string _filePath;
+        public Markov(string file)
         {
-            Chain = new Dictionary<string, Dictionary<string, int>>();
             _random = new System.Random();
+            _filePath = file;
+            LoadFromFile();
+        }
+
+        public void LoadFromFile()
+        {
+            Chain = Deserialize(_filePath);
         }
 
         public void Purge()
@@ -22,6 +32,9 @@ namespace Ronners.Bot.Models
                 Chain[key].Clear();
             }
             Chain.Clear();
+
+            //Save empty model
+            Serialize(_filePath);
         }
         public void GenerateChain(List<string> words)
         {
@@ -70,6 +83,9 @@ namespace Ronners.Bot.Models
                     Chain[lowecaseWord].Add(nextWord,1);
                 }
             }
+
+            //Save back to file
+            Serialize(_filePath);
         }
 
         public string GenerateString(string start)
@@ -141,6 +157,24 @@ namespace Ronners.Bot.Models
             }
 
             return normalizedChain;
+        }
+
+        private void Serialize(string file)
+        {
+            var json = JsonSerializer.Serialize(Chain,new JsonSerializerOptions(){WriteIndented =true});
+            File.WriteAllText(file,json,new UTF8Encoding(false));
+        }
+
+        private Dictionary<string,Dictionary<string,int>> Deserialize(string file)
+        {
+            var result = new Dictionary<string,Dictionary<string,int>>();
+            if(File.Exists(file))
+            {
+                var json = File.ReadAllText(file,new UTF8Encoding(false));
+                result = JsonSerializer.Deserialize<Dictionary<string,Dictionary<string,int>>>(json);
+            }
+            
+            return result;
         }
     }   
 }

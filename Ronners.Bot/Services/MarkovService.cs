@@ -23,7 +23,7 @@ namespace Ronners.Bot.Services
             _discord = services.GetRequiredService<Discord.WebSocket.DiscordSocketClient>();
             _webService =services.GetRequiredService<WebService>();
             _rand = services.GetRequiredService<Random>();
-            _markovModel = new Markov();
+            _markovModel = new Markov("markov.json");
         }
 
         public async Task MessageReceiveAsync(Discord.WebSocket.SocketMessage rawMessage)
