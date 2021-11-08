@@ -6,6 +6,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Ronners.Bot.Models;
+using System.Linq;
 
 namespace Ronners.Bot.Services
 {
@@ -16,11 +17,14 @@ namespace Ronners.Bot.Services
         private readonly IServiceProvider _services;
 
         private readonly AchievementService _achievements;
+
+        private readonly Random _rand;
         public CommandHandlingService(IServiceProvider services)
         {
             _commands = services.GetRequiredService<CommandService>();
             _discord = services.GetRequiredService<DiscordSocketClient>();
             _achievements = services.GetRequiredService<AchievementService>();
+            _rand = services.GetRequiredService<Random>();
             
             _services = services;
             // Hook CommandExecuted to handle post-command-execution logic.
@@ -42,7 +46,16 @@ namespace Ronners.Bot.Services
             if (!(rawMessage is SocketUserMessage message)) return;
             if (message.Source != MessageSource.User) return;
 
-            //await _services.GetRequiredService<GameService>().AddRonPoint(rawMessage.Author);
+            if(_rand.Next(0,10) == 0)
+            {
+                SocketGuild guild = ((SocketGuildChannel)rawMessage.Channel).Guild;
+                IEmote emote = guild.Emotes.FirstOrDefault(e => e.Name == "ronners");
+                if(emote is not null)
+                    await rawMessage.AddReactionAsync(emote);
+
+                await _services.GetRequiredService<GameService>().AddRonPoints(rawMessage.Author,10);
+            } 
+           
 
             // This value holds the offset where the prefix ends
             var argPos = 0;

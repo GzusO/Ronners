@@ -38,14 +38,13 @@ namespace Ronners.Bot.Services
         {
             foreach(var stock in Stocks)
             {
-                var rnd = _rand.NextDouble();
-                var changePercent = 2* stock.Volatility * rnd;
-                if(changePercent> stock.Volatility)
-                    changePercent -= (2*stock.Volatility);
-                var oldPrice = stock.Price;
-                int changeAmount = (int)Math.Round(oldPrice * changePercent);
-                stock.Price = oldPrice + changeAmount;
-                stock.Change = changeAmount;
+                var randChange = (2*_rand.NextDouble()-1)*stock.Volatility*stock.Average;
+                int newPrice = (int)Math.Round(stock.Min+.5*(stock.Max-stock.Min)*(1+Math.Sin((stock.Increment*stock.Spread)+stock.Shift))+randChange);
+                if( newPrice < 0)
+                    newPrice = 0;
+                stock.Change = newPrice - stock.Price;
+                stock.Price = newPrice;
+                stock.Increment++;
             }
             await WriteStocksToFile();
         }
@@ -59,18 +58,17 @@ namespace Ronners.Bot.Services
             return Stocks.Find(stock => stock.Symbol == ticker);
         }
 
-        internal void AddStock(string symbol, string company, int price, double volatility)
+        internal void AddStock(string symbol, string company, int min, int max, double spread, double volatility, double shift=0, long increment=0)
         {
-            Stocks.Add(new RonStock(){Symbol=symbol,CompanyName=company,Price = price,Volatility=volatility});
+            Stocks.Add(new RonStock(symbol,company,min,max,spread,volatility,shift,increment));
         }
 
         public static List<RonStock> GenerateNewRonStock()
         {
             var stocks = new List<RonStock>();
-            stocks.Add(new RonStock(){Symbol="TEST",CompanyName="Test Company",Price=25,Volatility=.1});
-            stocks.Add(new RonStock(){Symbol="DEEZ",CompanyName="Deez Nuts",Price=50,Volatility=.2});
-            stocks.Add(new RonStock(){Symbol="CUM",CompanyName="Cum Rocket - The Best Crypto",Price=6969,Volatility=.5});
-
+            stocks.Add(new RonStock("TEST","Test Company",1,1,0,0));
+            stocks.Add(new RonStock("DEEZ","Deez Nuts",69,420,.0069,.024,2));
+            stocks.Add(new RonStock("CUM","Cum Rocket - The Last Crypto",420,6969,.0015,.09,11));
             return stocks;
         }
 

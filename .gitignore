@@ -8,3 +8,4 @@
 *.db
 Ronners.Bot/config.json
 Ronners.Bot/ronStock.json
+Ronners.Bot/markov.json

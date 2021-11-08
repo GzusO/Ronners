@@ -18,10 +18,39 @@ namespace Ronners.Bot.Models
         [JsonPropertyName("volatility")]
         public double Volatility {get;set;}
 
-        public RonStock()
+        [JsonPropertyName("min")]
+        public int Min {get;set;}
+
+        [JsonPropertyName("max")]
+        public int Max {get;set;}
+
+        [JsonPropertyName("spread")]
+        public double Spread {get;set;}
+
+        [JsonPropertyName("shift")]
+        public double Shift {get;set;}
+
+        [JsonPropertyName("increment")]
+        public long Increment {get;set;}
+
+        [JsonIgnore]
+        public int Average {get{return (Min+Max)/2;}}
+
+        public RonStock(string symbol, string company, int min, int max, double spread, double volatility, double shift = 0, long increment = 0)
         {
+            Symbol = symbol;
+            CompanyName = company;
+            Min=min;
+            Max=max;
+            Spread = spread;
+            Volatility = volatility;
+            Shift = shift;
+            Increment = increment;
             Change = 0;
+            Price = (Min+Max)/2;
         }
+        public RonStock()
+        {}
 
         public override string  ToString()
         {

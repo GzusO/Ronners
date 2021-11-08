@@ -159,10 +159,10 @@ namespace Ronners.Bot.Modules
 
         [RequireOwner]
         [Command("add")]
-        [Summary("Owner Command")]
-        public async Task AddAsync(string symbol, int price, double volatility, string companyName)
+        [Summary("Owner Command !ronstock add ['TICKER'] ['COMPANY NAME'] [min:INT] [max:INT] [spread:DOUBLE] [volatility:DOUBLE] {shift:DOUBLE}")]
+        public async Task AddAsync(string symbol, string company, int min, int max, double spread, double volatility, double shift=0)
         {
-            RonStockMarketService.AddStock(symbol,companyName,price,volatility);
+            RonStockMarketService.AddStock(symbol,company,min,max,spread,volatility,shift);
         }
 
         private Embed BuildEmbed(RonStock stock)
