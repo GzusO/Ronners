@@ -47,6 +47,8 @@ namespace Ronners.Bot.Services
                 stock.Increment++;
             }
             await WriteStocksToFile();
+
+            await LoggingService.LogAsync("RonStock",Discord.LogSeverity.Info, "RonStock Market refreshed.");
         }
         internal IEnumerable<RonStock> GetAllStocks()
         {

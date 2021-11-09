@@ -13,7 +13,8 @@ namespace Ronners.Bot.Services
                 severity = LogSeverity.Warning;
             }
 
-            await Log($"{GetSeverityString(severity)}",GetSeverityColor(severity));
+            await Log($" {System.DateTime.Now} ",ConsoleColor.DarkBlue);
+            await Log($" {GetSeverityString(severity)} ",GetSeverityColor(severity));
             await Log($" [{GetSourceString(src)}] ",ConsoleColor.DarkGray);
 
             if(!string.IsNullOrEmpty(message))
@@ -63,16 +64,15 @@ namespace Ronners.Bot.Services
                 "gateway"   => "GTWAY",
                 "bot"       => "RONRS",
                 "audio"     => "AUDIO",
+                "ronstock"  => "MARKT",
                 _           => source
             };
         }
 
         private static async Task Log(string message, ConsoleColor color)
         {
-            await Task.Run(() =>{
-                Console.ForegroundColor =color;
+            Console.ForegroundColor =color;
                 Console.Write(message);
-            });
         }
     }
 }
