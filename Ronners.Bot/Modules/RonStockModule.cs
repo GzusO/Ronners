@@ -20,7 +20,7 @@ namespace Ronners.Bot.Modules
 
         [Command]
         [Alias("help")]
-        [Summary("Lists all commands in RonStock {optional parameter}")]
+        [Summary("USAGE: !ronstock help {PAGE:INT}")]
         public async Task Help(int page = 1)
         {
             if(page < 1)
@@ -45,7 +45,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("portfolio")]
-        [Summary("Lists all stocks owned by a User. ronstock portfolio {User}.")]
+        [Summary("USAGE: !ronstock portfolio {USER}")]
         public async Task Portfolio(IUser user = null)
         {
             user = user ?? Context.User;
@@ -56,7 +56,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("buy")]
-        [Summary("Buy stocks. ronstock buy SYMBOL QUANTITY")]
+        [Summary("USAGE: !ronstock buy ['TICKER'] [QUANTITY:INT]")]
         public async Task BuyAsync(string ticker, int quantity)
         {
             if(quantity < 1)
@@ -101,7 +101,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("sell")]
-        [Summary("Sell stocks. ronstock sell SYMBOL QUANTITY")]
+        [Summary("USAGE: !ronstock sell ['TICKER'] [QUANTITY:INT]")]
         public async Task SellAsync(string ticker, int quantity)
         {
             var upperTicker = ticker.ToUpperInvariant();
@@ -139,7 +139,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("list")]
-        [Summary("List all stocks")]
+        [Summary("USAGE: !ronstock list")]
         public async Task ListAsync()
         {
             IEnumerable<RonStock> stocks = RonStockMarketService.GetAllStocks();
@@ -148,7 +148,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("info")]
-        [Summary("List info about a stock. ronstock info SYMBOL")]
+        [Summary("USAGE: !ronstock info ['TICKER']")]
         public async Task InfoAsync([Remainder] string ticker=null)
         {
             var upperTicker = ticker.ToUpperInvariant();
@@ -159,7 +159,7 @@ namespace Ronners.Bot.Modules
 
         [RequireOwner]
         [Command("add")]
-        [Summary("Owner Command !ronstock add ['TICKER'] ['COMPANY NAME'] [min:INT] [max:INT] [spread:DOUBLE] [volatility:DOUBLE] {shift:DOUBLE}")]
+        [Summary("USAGE: !ronstock add ['TICKER'] ['COMPANY NAME'] [min:INT] [max:INT] [spread:DOUBLE] [volatility:DOUBLE] {shift:DOUBLE}")]
         public async Task AddAsync(string symbol, string company, int min, int max, double spread, double volatility, double shift=0)
         {
             RonStockMarketService.AddStock(symbol,company,min,max,spread,volatility,shift);
