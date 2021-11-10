@@ -97,7 +97,7 @@ namespace Ronners.Bot.Modules
                 await GameService.UpdateUserRonStock(usr);
             }
 
-            await ReplyAsync($"Bought {quantity} shares of {upperTicker}.");
+            await ReplyAsync($"Bought {quantity} shares of {upperTicker} for {cost} rp.");
         }
 
         [Command("sell")]

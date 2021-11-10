@@ -48,7 +48,8 @@ namespace Ronners.Bot.Modules
             if(page < 1)
                 page = 1;
             var skip = 25*(page-1);
-            List<CommandInfo> commands = _commandService.Commands.Skip(skip).Take(25).ToList();
+            var module = _commandService.Modules.First(mod => mod.Name=="PublicModule");
+            var commands = module.Commands.Skip(skip).Take(25);
             EmbedBuilder embedBuilder = new EmbedBuilder();
             
 
@@ -56,17 +57,17 @@ namespace Ronners.Bot.Modules
             {
                 // Get the command Summary attribute information
                 string embedFieldText = command.Summary ?? "No description available\n";
-                embedBuilder.AddField($"{command.Name}", embedFieldText);
+                embedBuilder.AddField($"{module.Group} {command.Name}", embedFieldText);
             }
 
-            var commandCount = _commandService.Commands.Count();
+            var commandCount = module.Commands.Count();
             int pageCount = (commandCount + 24)/ 25;
 
             await ReplyAsync($"Commands Page [{page}/{pageCount}]: ", false, embedBuilder.Build());
-            
         }
 
         [Command("achievements")]
+        [Summary("List a users achievements.\nUSAGE: !achievements {USER}")]
         public async Task achievementsAsync(IUser user=null)
         {
             user = user ?? Context.User;
@@ -87,6 +88,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("markov")]
+        [Summary("Ronners Reply with a new setence starting with WORD.\nUSAGE: !markov {STARTWORD}")]
         public async Task markovAsync([Remainder] string text = null)
         {
             if(text == null)
@@ -101,6 +103,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("purge")]
+        [Summary("Purges Ronner's Markovian Model, Cost 100rp.\nUSAGE: !purge")]
         public async Task purgeAsync()
         {
             if(!await GameService.AddRonPoints(Context.User,-100))
@@ -114,6 +117,7 @@ namespace Ronners.Bot.Modules
         }
     
         [Command("best")]
+        [Summary("List the Best AMOUNT users.\nUSAGE: !best {AMOUNT}")]
         public async Task bestAsync(int count = 10)
         {
             var users = await GameService.GetUsers();
@@ -133,6 +137,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("captcha")]
+        [Summary("Requests a Captcha to solve for points.\nUSAGE: !captcha")]
         public async Task CaptchaAsync()
         {
             DirectoryInfo dir = new DirectoryInfo(CaptchaPath);
@@ -146,6 +151,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("choose")]
+        [Summary("Ronners picks the best item.\nUSAGE: !choose {'ITEM1'} {'ITEM2'} ... {'ITEM99'}")]
         public async Task chooseAsync(params string [] options)
         {
             int index = Rand.Next(options.Length);
@@ -154,6 +160,7 @@ namespace Ronners.Bot.Modules
         }
         
         [Command("count")]
+        [Summary("Displays how many times a USER said the word.\nUSAGE: !count {USER}")]
         public async Task PogCount(IUser user = null)
         {
             user = user ?? Context.User;
@@ -170,6 +177,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("draw")]
+        [Summary("Ronners follows commands to draw a image.\nUSAGE: !draw [COMPLICATED PARAMETERS]")]
         public async Task drawAsync([Remainder] string text=null)
         {
             SixLabors.ImageSharp.Color bg;
@@ -245,8 +253,9 @@ namespace Ronners.Bot.Modules
         }
         
 
-        // Get info on a user, or the user who invoked the command if one is not specified
+        
         [Command("userinfo")]
+        [Summary("USER Info.\nUSAGE: !userinfo {USER}")]
         public async Task UserInfoAsync(IUser user = null)
         {
             user = user ?? Context.User;
@@ -255,12 +264,14 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("source")]
+        [Summary("Ronners is Open Source.\nUSAGE: !source")]
         public async Task RonnerSource()
         {
             await ReplyAsync("https://github.com/GzusO/Ronners");
         }
 
         [Command("points")]
+        [Summary("Show a USERS points.\nUSAGE: !points {USER}")]
         public async Task PointCount(IUser user = null)
         {
             user = user ?? Context.User;
@@ -277,6 +288,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("stock")]
+        [Summary("Lookup a real stock price.\nUSAGE: !stock ['TICKER']")]
         public async Task stockAsync(string ticker ="")
         {
             var quote = await StockService.GetStockPrice(ticker);
@@ -288,6 +300,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("attribution")]
+        [Summary("Real stock data source.\nUSAGE: !attribution")]
         public async Task attributionAsync()
         {
             string response = string.Format("Stock Data provided by IEX Cloud https://iexcloud.io");
@@ -295,6 +308,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("changelog")]
+        [Summary("Maybe an updated Changelog\nUSAGE: !changelog")]
         public async Task changelogAsync()
         {
             string response = "";
@@ -346,6 +360,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("idea")]
+        [Summary("Submit an idea for Ronners.\nUSAGE: !idea ['THE IDEA']")]
         public async Task<RuntimeResult> ideaAsync([Remainder] string text)
         {   
             await GameService.InsertIdea(new Idea(text.Replace("'","").Replace("\"",""),Rand.Next()));
@@ -361,6 +376,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("ideas")]
+        [Summary("List an AMOUNT of ideas for Ronners.\nUSAGE: !ideas {AMOUNT}")]
         public async Task listIdeaAsync(int count = 5)
         {
             var result = await GameService.GetIdeas();
@@ -378,6 +394,7 @@ namespace Ronners.Bot.Modules
         }   
 
         [Command("join", RunMode = RunMode.Async)] 
+        [Summary("Ronners Joins the Voice Chat.\nUSAGE: !join {CHANNEL}")]
         public async Task JoinAsync(IVoiceChannel channel = null)
         {
             // Get the audio channel
@@ -391,6 +408,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("play", RunMode = RunMode.Async)] 
+        [Summary("Ronners Plays some sound.\nUSAGE: !play ['Sound to Play']")]
         public async Task PlayAsync([Remainder]string file)
         {
             string filename;
@@ -404,12 +422,14 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("leave", RunMode = RunMode.Async)] 
+        [Summary("Ronners leaves a voice chat.\nUSAGE: !leave")]
         public async Task LeaveAsync()
         {
             await AudioService.LeaveAudio(Context.Guild);
         }
 
         [Command("8ball")]
+        [Summary("Ronners predicts usings an 8 Ball.\nUSAGE: !8ball ['TEXT']")]
         public async Task<RuntimeResult> DecisionAsync ([Remainder] string text)
         {
             string response="";
@@ -496,6 +516,7 @@ namespace Ronners.Bot.Modules
 
 
         [Command("retribute")]
+        [Summary("Ronners decides if a USER should lose all their points for a REASON.\nUSAGE: !retribute [USER] ['REASON']")]
         public async Task RetributionAsync(IUser user, [Remainder] string reason)
         {
             int cooldownDuration = 86400;//1 day
@@ -558,7 +579,9 @@ namespace Ronners.Bot.Modules
             }
                 
         }
+        
         [Command("retributions")]
+        [Summary("List Retribution history.\nUSAGE: !retributions")]
         public async Task RetributionListAsync()
         {
             var retributions = await GameService.GetRetributions();
@@ -578,6 +601,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("roll")]
+        [Summary("Ronners rolls a die.\nUSAGE: !roll ['1d4']")]
         public async Task<RuntimeResult> RollAsync(string roll = "")
         {
             roll = roll.ToLower();
@@ -615,6 +639,7 @@ namespace Ronners.Bot.Modules
 
         }
         [Command("roll")]
+        [Summary("Ronners picks a random number between LOWER and UPPER.\nUSAGE: !roll [LOWER] [UPPER]")]
         public async Task<RuntimeResult> RollAsync(int lower, int upper)
         {
             int result = Rand.Next(lower,upper+1);
@@ -629,6 +654,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("slurp")]
+        [Summary("Ronners slurps.\nUSAGE: !slurp")]
         public async Task<RuntimeResult> SlurpAsync()
         {
             await Context.Channel.SendFileAsync("slurp.mp4","Slurp!");
@@ -641,12 +667,14 @@ namespace Ronners.Bot.Modules
             return achievementResult;
         }
         [Command("ron")]
+        [Summary("Ronners!\nUSAGE: !ron")]
         public async Task RonAsync()
         {
             await Context.Channel.SendFileAsync("ron.mp4","Ronners!");
         }
 
         [Command("Hangman")]
+        [Summary("Ronners starts a hangman game.\nUSAGE: !hangman")]
         public async Task HangmanAsync()
         {
             if(HangmanService.Started)
@@ -656,6 +684,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("TicTacToe")]
+        [Summary("Ronners starts a TicTacToe game for you and USER.\nUSAGE: !tictactoe [USER]")]
         public async Task TicTacToeAsync(IGuildUser user)
         {
             var message = await ReplyAsync($"<@{Context.User.Id}> Challenged <@{user.Id}> to TicTacToe.");
@@ -668,6 +697,7 @@ namespace Ronners.Bot.Modules
 
         [Command("owo")]
         [Alias("uwu")]
+        [Summary("Wonnews UwU's some text (✿ ♡‿♡).\nUSAGE: !owo ['TEXT']")]
         public async Task OwOAsync([Remainder]string text)
         {
             if(!await GameService.AddRonPoints(Context.User,-2))
