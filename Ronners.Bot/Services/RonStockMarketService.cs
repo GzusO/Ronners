@@ -40,8 +40,8 @@ namespace Ronners.Bot.Services
             {
                 var randChange = (2*_rand.NextDouble()-1)*stock.Volatility*stock.Average;
                 int newPrice = (int)Math.Round(stock.Min+.5*(stock.Max-stock.Min)*(1+Math.Sin((stock.Increment*stock.Spread)+stock.Shift))+randChange);
-                if( newPrice < 0)
-                    newPrice = 0;
+                if( newPrice < 1)
+                    newPrice = 1;
                 stock.Change = newPrice - stock.Price;
                 stock.Price = newPrice;
                 stock.Increment++;
