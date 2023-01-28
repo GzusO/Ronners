@@ -1,3 +1,0 @@
-weapon1,Weapon,Weapon,Weapon
-armor1,Armor,Armor,Armor
-Drops,armor1,weapon1,armor1

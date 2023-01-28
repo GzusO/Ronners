@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using System.Threading.Tasks;
+using System.IO;
+using System.Reflection;
+using System.ComponentModel;
 
 namespace Ronners.Bot.Extensions
 {
@@ -92,6 +96,18 @@ namespace Ronners.Bot.Extensions
                 list[k] = list[n];  
                 list[n] = value;  
             }  
+        }
+
+        public static string GetEnumDescription(this Enum value)
+        {
+            // Get the Description attribute value for the enum value
+            FieldInfo fi = value.GetType().GetField(value.ToString());
+            DescriptionAttribute[] attributes = (DescriptionAttribute[])fi.GetCustomAttributes(typeof(DescriptionAttribute), false);
+
+            if (attributes.Length > 0)
+                return attributes[0].Description;
+            else
+                return value.ToString();
         }
     }
        

@@ -9,6 +9,7 @@ using Ronners.Bot.Services;
 
 namespace Ronners.Bot.Modules
 {
+    [RequireOwner]
     [Group("ronstock")]
     public class RonStockModule : ModuleBase<SocketCommandContext>
     {

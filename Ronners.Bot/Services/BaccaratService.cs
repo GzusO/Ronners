@@ -165,6 +165,7 @@ namespace Ronners.Bot.Services
             return val;
         }
 
+        //TODO: remove after testing
         public BaccaratBetType GetBetType(string bet)
         {
             switch(bet.ToLower())
@@ -179,7 +180,7 @@ namespace Ronners.Bot.Services
                 case "t":
                     return BaccaratBetType.Tie;
                 default:
-                    return BaccaratBetType.Unknown;
+                    return BaccaratBetType.Player;
             }
         }
     }
@@ -187,7 +188,6 @@ namespace Ronners.Bot.Services
     {
         Player,
         Banker,
-        Tie,
-        Unknown
+        Tie
     }  
 }

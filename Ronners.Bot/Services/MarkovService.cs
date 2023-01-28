@@ -48,7 +48,7 @@ namespace Ronners.Bot.Services
                     
                 }
             }
-            if(_rand.Next(0,100)==0)
+            if(_rand.Next(0,100)==0 || (message.MentionedUsers.Where(x=> x.Id ==785642924011946004).Count() >0 && message.Author.Id != 997286497411678218))
                 await message.Channel.SendMessageAsync(GenerateMessage(""),false,null,null,null,new Discord.MessageReference(message.Id));
         }
 

@@ -1,35 +1,35 @@
 using System.Threading.Tasks;
 using Discord;
-using Discord.Commands;
 using Ronners.Bot.Services;
 using System;
+using Discord.Interactions;
 
 namespace Ronners.Bot.Modules
 {
-    [Group("slots")]
-    public class SlotsModule : ModuleBase<SocketCommandContext>
+    [Group("slots","Ronners Slot Machine")]
+    public class SlotsModule : InteractionModuleBase<SocketInteractionContext>
     {
         public GameService GameService{get;set;}
         public Random Rand{get;set;}
         public SlotService SlotService{get;set;}
 
-        [Command("bet")]
-        public async Task BetAsync(int betAmount)
+        [SlashCommand("bet","Bet on the Ronners slot machine")]
+        public async Task BetAsync([MinValue(1)]int betAmount)
         {
             var user = await GameService.GetUserByID(Context.User.Id);
             if(betAmount <= 0)
             {
-                await ReplyAsync("Bet must be greater than 0");
+                await RespondAsync("Bet must be greater than 0");
                 return;
             }
             if(user is null)
             {
-                await ReplyAsync("Unable to find User");
+                await RespondAsync("Unable to find User");
                 return;
             }
             if(!await GameService.AddRonPoints(Context.User,-1*betAmount))
             {
-                await ReplyAsync("Not Enough Points");
+                await RespondAsync("Not Enough Points");
                 return;
             }
 
@@ -38,24 +38,23 @@ namespace Ronners.Bot.Modules
             Slot slot;
             (winnings,slot) = SlotService.Play(betAmount);
             await GameService.AddRonPoints(Context.User, winnings);
-            await ReplyAsync($"```{slot.ToString()}```\n{Context.User.Username} received {winnings} RonPoints");
+            await RespondAsync($"```{slot.ToString()}```\n{Context.User.Username} received {winnings} RonPoints");
         }
 
-        [Command("help")]
-        [Alias("?")]
+        [SlashCommand("help","Description of the Ronners slot machine")]
         public async Task helpAsync()
         {
             var builder = new EmbedBuilder()
                 .WithTitle("Slots Help")
-                .WithDescription("**Syntax:**\n```!slots bet {amount}```")
+                .WithDescription("**Syntax:**\n```/slots bet {amount}```")
                 .WithUrl("")
                 .WithColor(Color.Gold)
                 .AddField("Payouts","■ ■     1x\n♢♢     2x\n♧♧     3x\n♡♡     4x\nඞඞ     20x",true)
-                .AddField("Payouts","■ ■ ■   2x\n♢♢♢    5x\n♧♧♧    8x\n♡♡♡   10x\nඞඞඞ   750x",true)
-                .AddField("Examples", "!slots bet 69");
+                .AddField("Payouts","■ ■ ■   2x\n♢♢♢    5x\n♧♧♧    8x\n♡♡♡   10x\nඞඞඞ   769",true)
+                .AddField("Examples", "/slots bet 1");
             var embed = builder.Build();
-
-            await ReplyAsync("",false,embed);
+            Embed []  embeds = new Embed[]{embed};
+            await RespondAsync("",embed:embed);
         }
 
     }

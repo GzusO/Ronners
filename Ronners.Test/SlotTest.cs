@@ -12,20 +12,19 @@ namespace Ronners.Test
         public void TestPayout()
         {
             SlotService ss = new SlotService(new Random());
-            int x = 10000000;
+            int x = 100000000;
             int y = x;
             int winnings = 0;
-            Slot multi;
             int temp =0;
             while(x > 0)
             {
                 x--;
-                (temp,multi)=ss.Play(1);
+                (temp,_)=ss.Play(1);
                 winnings+=temp;
             }
             double RTP = (double)winnings/(double)y;
             Debug.WriteLine($"Winnings:{winnings}, Runs:{y}, RTP:{RTP}\n");
-            Assert.IsTrue(RTP>=.98 && RTP <= 1.0);
+            Assert.IsTrue(RTP>=.99 && RTP <= 1.01);
         }
 
     }

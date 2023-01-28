@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Discord;
+using Discord.Interactions;
 using Discord.Commands;
 using Discord.WebSocket;
 using Ronners.Bot.Models;
@@ -19,14 +20,16 @@ namespace Ronners.Bot.Services
         private readonly AchievementService _achievements;
 
         private readonly Random _rand;
+        private readonly InteractionService _interactions;
         public CommandHandlingService(IServiceProvider services)
         {
             _commands = services.GetRequiredService<CommandService>();
             _discord = services.GetRequiredService<DiscordSocketClient>();
             _achievements = services.GetRequiredService<AchievementService>();
             _rand = services.GetRequiredService<Random>();
-            
+            _interactions = services.GetRequiredService<InteractionService>();
             _services = services;
+
             // Hook CommandExecuted to handle post-command-execution logic.
             _commands.CommandExecuted += CommandExecutedAsync;
             // Hook MessageReceived so we can process each message to see
@@ -38,6 +41,15 @@ namespace Ronners.Bot.Services
         {
             // Register modules that are public and inherit ModuleBase<T>.
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
+
+            // Add the public modules that inherit InteractionModuleBase<T> to the InteractionService
+            await _interactions.AddModulesAsync(Assembly.GetEntryAssembly(),_services);
+
+            _discord.InteractionCreated += HandleInteraction;
+
+            _interactions.SlashCommandExecuted += SlashCommandExecuted;
+            _interactions.ContextCommandExecuted += ContextCommandExecuted;
+            _interactions.ComponentCommandExecuted += ComponentCommandExecuted;
         }
 
         public async Task MessageReceivedAsync(SocketMessage rawMessage)
@@ -76,7 +88,7 @@ namespace Ronners.Bot.Services
             // we will handle the result in CommandExecutedAsync,
         }
 
-        public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
+        public async Task CommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, Discord.Commands.IResult result)
         {
             switch(result)
             {
@@ -92,6 +104,112 @@ namespace Ronners.Bot.Services
                     if (!string.IsNullOrEmpty(result.ErrorReason))
                         await context.Channel.SendMessageAsync($"Error: {result}");
                     break;
+            }
+        }
+
+         private Task ComponentCommandExecuted (ComponentCommandInfo arg1, Discord.IInteractionContext arg2, Discord.Interactions.IResult arg3)
+        {
+            if (!arg3.IsSuccess)
+            {
+                switch (arg3.Error)
+                {
+                    case InteractionCommandError.UnmetPrecondition:
+                        // implement
+                        break;
+                    case InteractionCommandError.UnknownCommand:
+                        // implement
+                        break;
+                    case InteractionCommandError.BadArgs:
+                        // implement
+                        break;
+                    case InteractionCommandError.Exception:
+                        // implement
+                        break;
+                    case InteractionCommandError.Unsuccessful:
+                        // implement
+                        break;
+                    default:
+                        break;
+                }
+            }    
+
+            return Task.CompletedTask;
+        }
+
+        private Task ContextCommandExecuted (ContextCommandInfo arg1, Discord.IInteractionContext arg2, Discord.Interactions.IResult arg3)
+        {
+            if (!arg3.IsSuccess)
+            {
+                switch (arg3.Error)
+                {
+                    case InteractionCommandError.UnmetPrecondition:
+                        // implement
+                        break;
+                    case InteractionCommandError.UnknownCommand:
+                        // implement
+                        break;
+                    case InteractionCommandError.BadArgs:
+                        // implement
+                        break;
+                    case InteractionCommandError.Exception:
+                        // implement
+                        break;
+                    case InteractionCommandError.Unsuccessful:
+                        // implement
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private Task SlashCommandExecuted (SlashCommandInfo arg1, Discord.IInteractionContext arg2, Discord.Interactions.IResult arg3)
+        {
+            if (!arg3.IsSuccess)
+            {
+                switch (arg3.Error)
+                {
+                    case InteractionCommandError.UnmetPrecondition:
+                        // implement
+                        break;
+                    case InteractionCommandError.UnknownCommand:
+                        // implement
+                        break;
+                    case InteractionCommandError.BadArgs:
+                        // implement
+                        break;
+                    case InteractionCommandError.Exception:
+                        // implement
+                        break;
+                    case InteractionCommandError.Unsuccessful:
+                        // implement
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private async Task HandleInteraction (SocketInteraction arg)
+        {
+            try
+            {
+                // Create an execution context that matches the generic type parameter of your InteractionModuleBase<T> modules
+                var ctx = new SocketInteractionContext(_discord, arg);
+                await _interactions.ExecuteCommandAsync(ctx, _services);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+
+                // If a Slash Command execution fails it is most likely that the original interaction acknowledgement will persist. It is a good idea to delete the original
+                // response, or at least let the user know that something went wrong during the command execution.
+                if(arg.Type == InteractionType.ApplicationCommand)
+                    await arg.GetOriginalResponseAsync().ContinueWith(async (msg) => await msg.Result.DeleteAsync());
             }
         }
     }

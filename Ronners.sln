@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ronners.Loot", "Ronners.Loot\Ronners.Loot.csproj", "{C0184D97-CA8D-40FE-8C0D-39C2183228BB}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ronners.Bot", "Ronners.Bot\Ronners.Bot.csproj", "{B694A194-7D03-4962-AC2F-67829017F56C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ronners.Test", "Ronners.Test\Ronners.Test.csproj", "{9F7274A9-4D8F-4537-BC50-482E82EDE5B3}"
@@ -22,18 +20,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Debug|x64.Build.0 = Debug|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Debug|x86.Build.0 = Debug|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Release|x64.ActiveCfg = Release|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Release|x64.Build.0 = Release|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Release|x86.ActiveCfg = Release|Any CPU
-		{C0184D97-CA8D-40FE-8C0D-39C2183228BB}.Release|x86.Build.0 = Release|Any CPU
 		{B694A194-7D03-4962-AC2F-67829017F56C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B694A194-7D03-4962-AC2F-67829017F56C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B694A194-7D03-4962-AC2F-67829017F56C}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -58,5 +44,6 @@ Global
 		{9F7274A9-4D8F-4537-BC50-482E82EDE5B3}.Release|x64.Build.0 = Release|Any CPU
 		{9F7274A9-4D8F-4537-BC50-482E82EDE5B3}.Release|x86.ActiveCfg = Release|Any CPU
 		{9F7274A9-4D8F-4537-BC50-482E82EDE5B3}.Release|x86.Build.0 = Release|Any CPU
+
 	EndGlobalSection
 EndGlobal

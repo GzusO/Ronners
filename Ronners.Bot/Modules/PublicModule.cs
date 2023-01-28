@@ -7,8 +7,9 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 using Ronners.Bot.Extensions;
-using Ronners.Loot;
 using Ronners.Bot.Models;
+using Discord.WebSocket;
+using Ronners.Bot.Models.GoogleBooks;
 
 namespace Ronners.Bot.Modules
 {
@@ -28,19 +29,10 @@ namespace Ronners.Bot.Modules
         public MarkovService MarkovService{get;set;}
 
         public CommandService _commandService {get;set;}
+        public DiscordSocketClient _discord  {get;set;}
+        public BookService BookService {get;set;}
 
         private static string CaptchaPath = Path.Combine(Directory.GetCurrentDirectory(),ConfigService.Config.CaptchaFolder);
-
-
-
-        private readonly Dictionary<string,string> Soundbytes = new Dictionary<string,string>()
-        {
-            {"what", "ronnersWhat.mp3"},
-            {"ronners", "ronners.mp3"},
-            {"drank", "ronnersDrank.mp3"},
-            {"mode", "ronnersMode.mp3"},
-            {"ruler", "ronnersRuler.mp3"}
-        };
 
         [Command("help")]
         public async Task Help(int page = 1)
@@ -86,35 +78,6 @@ namespace Ronners.Bot.Modules
             }
             await ReplyAsync(response); 
         }
-
-        [Command("markov")]
-        [Summary("Ronners Reply with a new setence starting with WORD.\nUSAGE: !markov {STARTWORD}")]
-        public async Task markovAsync([Remainder] string text = null)
-        {
-            if(text == null)
-                text ="";
-            var response = MarkovService.GenerateMessage(text.ToLowerInvariant().Trim());
-
-            var chance = Rand.Next(0,100);
-            if(Rand.Next(0,100)==0)
-                await ReplyAsync(response.owo());
-            else
-                await ReplyAsync(response);
-        }
-
-        [Command("purge")]
-        [Summary("Purges Ronner's Markovian Model, Cost 100rp.\nUSAGE: !purge")]
-        public async Task purgeAsync()
-        {
-            if(!await GameService.AddRonPoints(Context.User,-100))
-            {
-                await ReplyAsync("Not Enough Points! Costs 100 RonPoints.");
-                return;
-            }
-
-            MarkovService.Purge();
-            await ReplyAsync("Markov Brain Purged, Ronners!");
-        }
     
         [Command("best")]
         [Summary("List the Best AMOUNT users.\nUSAGE: !best {AMOUNT}")]
@@ -135,6 +98,7 @@ namespace Ronners.Bot.Modules
             }
             await ReplyAsync(response);
         }
+
 
         [Command("captcha")]
         [Summary("Requests a Captcha to solve for points.\nUSAGE: !captcha")]
@@ -174,6 +138,59 @@ namespace Ronners.Bot.Modules
             string resp = String.Format("{0} has said a variation of p*g {1} times. Ronners!",user.Username,pogCount);
             await ReplyAsync(resp);
             return;
+        }
+
+        [Command("daily")]
+        [Summary("Daily Rewards.\nUSAGE: !daily")]
+        public async Task<RuntimeResult> dailyAsync()
+        {
+            var user = Context.User;
+
+            UserDaily daily = await GameService.GetUserDaily(user);
+
+            if (daily is null)
+            {
+                daily = new UserDaily(){UserID=user.Id,LastCheckIn = 0,Streak =0};
+                await GameService.AddUserDaily(daily);
+            }
+
+            int daysSinceLastCheckIn = (DateTime.UtcNow.Date - DateTimeOffset.FromUnixTimeSeconds(daily.LastCheckIn).Date).Days;
+            daily.LastCheckIn = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            await LoggingService.LogAsync("bot",LogSeverity.Info,$"Days Since last check in:{daysSinceLastCheckIn}");
+
+            //Same Day
+            if (daysSinceLastCheckIn < 1)
+            {
+                return AchievementResult.FromError("Already claimed Daily!");
+            }
+            
+            if(daysSinceLastCheckIn == 1)
+                daily.Streak++;
+            else
+                daily.Streak = 1;
+
+            await GameService.UpdateUserDaily(daily);
+            
+            int reward = Rand.Next(100,200);
+            reward += (int)Math.Round(reward*((daily.Streak-1)/100.0));
+
+            int balance = (await GameService.GetUserByID(user.Id)).RonPoints;
+            double interestRate = .01;
+            int interest = (int)Math.Round(balance*interestRate);
+
+            await GameService.AddRonPoints(user,reward+interest);
+
+            string resp = $"{user.Username} is on a {daily.Streak} day streak!\nDaily Bonus: {reward} RonPoints.\n Daily Interest: {interest} RonPoints.";
+            
+            await ReplyAsync(resp);
+
+            var achievementResult = AchievementResult.FromSuccess();
+
+            achievementResult.AchievementType = AchievementType.Daily;
+            achievementResult.IntValue = daily.Streak;
+            achievementResult.User = Context.User;
+
+            return achievementResult;
         }
 
         [Command("draw")]
@@ -251,8 +268,62 @@ namespace Ronners.Bot.Modules
 
             File.Delete(file); //Cleanup
         }
-        
 
+        [Command("give")]
+        [Summary("Give RonPoints to a user.\nUSAGE: !give {user} {amount}")]
+        public async Task giveAsync(IUser user, int amount)
+        {
+            var giver = Context.User;
+
+            if(amount <0)
+            {
+                await ReplyAsync($"Invalid amount. Amount must be > 0");
+                return;
+            }
+            
+            //Remove points from Giver
+            if(await GameService.AddRonPoints(giver,-1*amount))
+            {
+                //Grant points to receiver
+                await GameService.AddRonPoints(user,amount);
+                await ReplyAsync ($"{giver.Mention} gave {amount} RonPoints to {user.Mention}.");
+            }
+            else
+            {
+                await ReplyAsync($"You do not have enough points.");
+                return;
+            }
+
+        }
+        
+        [Command("markov")]
+        [Summary("Ronners Reply with a new setence starting with WORD.\nUSAGE: !markov {STARTWORD}")]
+        public async Task markovAsync([Remainder] string text = null)
+        {
+            if(text == null)
+                text ="";
+            var response = MarkovService.GenerateMessage(text.ToLowerInvariant().Trim());
+
+            var chance = Rand.Next(0,100);
+            if(Rand.Next(0,100)==0)
+                await ReplyAsync(response.owo());
+            else
+                await ReplyAsync(response);
+        }
+
+        [Command("purge")]
+        [Summary("Purges Ronner's Markovian Model, Cost 100rp.\nUSAGE: !purge")]
+        public async Task purgeAsync()
+        {
+            if(!await GameService.AddRonPoints(Context.User,-100))
+            {
+                await ReplyAsync("Not Enough Points! Costs 100 RonPoints.");
+                return;
+            }
+
+            MarkovService.Purge();
+            await ReplyAsync("Markov Brain Purged, Ronners!");
+        }
         
         [Command("userinfo")]
         [Summary("USER Info.\nUSAGE: !userinfo {USER}")]
@@ -271,6 +342,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("points")]
+        [Alias("balance")]
         [Summary("Show a USERS points.\nUSAGE: !points {USER}")]
         public async Task PointCount(IUser user = null)
         {
@@ -299,6 +371,18 @@ namespace Ronners.Bot.Modules
             await ReplyAsync("",false,BuildEmbed(quote));
         }
 
+        [Command("book")]
+        [Summary("Lookup a book.\nUSAGE: !book ['book query']")]
+        public async Task bookAsync([Remainder]string query ="")
+        {
+            var book = await BookService.GetBookDetails(query);
+            if(book is null)
+            {
+                await ReplyAsync(string.Format("Failed to find a book matching: {0}",query));
+            }
+            await ReplyAsync("",false,BuildEmbed(book));
+        }
+
         [Command("attribution")]
         [Summary("Real stock data source.\nUSAGE: !attribution")]
         public async Task attributionAsync()
@@ -312,6 +396,13 @@ namespace Ronners.Bot.Modules
         public async Task changelogAsync()
         {
             string response = "";
+            response += @"2021-12-28 18:18 
+- Added !daily
+- 'Temporarily' Removed !ronstock 
+    due to balance issues.
+- Reset RonPoints
+    due to RonStocks inflating economy.
+";
             response += @"2021-10-28 18:48
 - Added !slurp
     SLURP!
@@ -331,30 +422,6 @@ namespace Ronners.Bot.Modules
     to purge the Markovian Model for 100 RonPoints.
 - Added !help
     Command List and no descriptions yet.
-";
-            response += @"2021-02-02 20:09 pm
-- !draw improved
-    c/circle centerX centerY radius - draws circle
-    cf/circlefill centerX centerY radius  - draws filled circle
-    r/rect/rectangle topLeftX TopLeftY width height - draw rectangle
-    rf/rectfill/rectanglefill topLeftx TopLeftY width height - draw filled rectangle
-    d/dot/point X Y - draw single point
-    Canvas now 512 x 512 in size
-";
-            response += @"2021-01-30 15:02 pm
-- Added !draw
-    Canvas is 500x500 max.
-    bg {color name/hexstring} - Set background needs to be first cmd defaults to white if not set
-    p/pen {color name/hexstring} - Set Pen color for subsequent draws
-    l/line x0 y0 x1 y1 -draws line
-";
-            response += @"2021-01-29 13:20 pm
-- Added !idea to submit ideas to ronners
-";
-            response += @"2021-01-29 13:02 pm\n 
-- Fixed !8ball not awarding RonPoints.
-- added !changelog.
-- added !attribution
 ";
             await ReplyAsync(response);
         }
@@ -401,24 +468,24 @@ namespace Ronners.Bot.Modules
             channel = channel ?? (Context.User as IGuildUser)?.VoiceChannel;
             if (channel == null) { await Context.Channel.SendMessageAsync("User must be in a voice channel, or a voice channel must be passed as an argument."); return; }
 
-            var filename = Soundbytes.Values.ToList()[Rand.Next(Soundbytes.Values.Count)];
+            var audioFile = AudioService.GetRandomAudioFile();
 
             await AudioService.JoinAudio(Context.Guild, channel);
-            await AudioService.SendAudioAsync(Context.Guild,Context.Channel, filename);
+            await AudioService.SendAudioAsync(Context.Guild,Context.Channel, audioFile);
         }
 
         [Command("play", RunMode = RunMode.Async)] 
         [Summary("Ronners Plays some sound.\nUSAGE: !play ['Sound to Play']")]
         public async Task PlayAsync([Remainder]string file)
         {
-            string filename;
-            if(!Soundbytes.TryGetValue(file.ToLower().Trim(),out filename))
+            file = file.Trim().ToLower();
+            if(!AudioService.ValidFile(file))
             {
-                 await ReplyAsync("Invalid Sound Bite");
-                 return;
+                await ReplyAsync($"Invalid file: {file}");
+                return;
             }
-            await ReplyAsync($"Playing {filename}.");
-            await AudioService.SendAudioAsync(Context.Guild,Context.Channel,filename);
+            await ReplyAsync($"Playing {file}.");
+            await AudioService.SendAudioAsync(Context.Guild,Context.Channel,file);
         }
 
         [Command("leave", RunMode = RunMode.Async)] 
@@ -426,6 +493,23 @@ namespace Ronners.Bot.Modules
         public async Task LeaveAsync()
         {
             await AudioService.LeaveAudio(Context.Guild);
+        }
+        [Command("audio")]
+        [Summary("List audio files available to play.")]
+        public async Task AudioAsync()
+        {
+            var files = AudioService.GetAudioFiles();
+            string response = "";
+            foreach(var file in files)
+            {
+                if(response.Length + file.Length > 1998)
+                {
+                    await ReplyAsync(response);
+                    response = "";
+                }
+                response += file+"\n";
+            }
+            await ReplyAsync(response);
         }
 
         [Command("8ball")]
@@ -666,8 +750,8 @@ namespace Ronners.Bot.Modules
 
             return achievementResult;
         }
-        [Command("ron")]
-        [Summary("Ronners!\nUSAGE: !ron")]
+        [Command("ronners")]
+        [Summary("Ronners!\nUSAGE: !ronners")]
         public async Task RonAsync()
         {
             await Context.Channel.SendFileAsync("ron.mp4","Ronners!");
@@ -708,24 +792,96 @@ namespace Ronners.Bot.Modules
             await ReplyAsync(text.owo());
         }
 
-        private Embed BuildEmbed(Item item)
+        [Command("set")]
+        [RequireOwner]
+        [Summary("Sets activity message")]
+        public async Task SetAsync([Remainder]string text)
+        {
+            await _discord.SetGameAsync(text,null,ActivityType.Playing);
+        }
+
+
+        [Command("inventory")]
+        [Alias("inv")]
+        [Summary("Display Users inventory of gacha items.\nUSAGE: !inventory")]
+        public async Task InventoryAsync(IUser user = null)
+        {
+            user = user ?? Context.User;
+            var items = await GameService.GetUsersItems(user);
+            var collections = await GameService.GetCollections();
+
+            var menuBuilder = new SelectMenuBuilder()
+                .WithPlaceholder("Select a Collection")
+                .WithCustomId("inventory_details")
+                .WithMinValues(1)
+                .WithMaxValues(1);
+
+            foreach(var col in collections)
+                menuBuilder.AddOption(col.Name,col.Name);
+
+            var builder = new ComponentBuilder()
+            .WithSelectMenu(menuBuilder);
+    
+            await Context.Message.ReplyAsync($"{user.Username}'s Gacha Collection",false,BuildEmbed(items,collections),components:builder.Build());
+        }
+
+        private Embed BuildEmbed(IEnumerable<UserItemDetailed> items, IEnumerable<Collection> collections)
+        {  
+            var collectionDict = new Dictionary<string,int>();
+            foreach(var collection in collections)
+            {
+                collectionDict.Add(collection.Name,0);
+            }
+            var groupedItems = items.GroupBy(x=> x.Item.Collection);
+            foreach(var group in groupedItems)
+            {
+                if(collectionDict.ContainsKey(group.Key))
+                    collectionDict[group.Key] +=group.Count();
+                else
+                    collectionDict.Add(group.Key,group.Count());
+            }
+            var totalItems = collections.Sum(x=> x.NumberOfItems);
+            var collectedItems = items.Count();
+
+            var completion = (double)collectedItems/totalItems;
+            var color = new Color(Convert.ToByte((1-completion)*255), Convert.ToByte(completion*255),Convert.ToByte(0));
+            
+            
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithTitle($"{collectedItems}/{totalItems} Unique Items Collected");
+            builder.WithColor(color);
+            foreach(var collection in collectionDict)
+            {
+                builder.Description+= $"- {collection.Key} ( {collection.Value} / {collections.First(x=> x.Name==collection.Key).NumberOfItems} )\n";
+            }
+
+            builder.WithCurrentTimestamp();
+            return builder.Build();
+        }
+
+        private Embed BuildEmbed(IEnumerable<UserItemDetailed> items,Collection collection)
         {
             EmbedBuilder builder = new EmbedBuilder();
+            var completion = (double)items.Count()/collection.NumberOfItems;
+            var color = new Color(Convert.ToByte((1-completion)*255), Convert.ToByte(completion*255),Convert.ToByte(0));
+            builder.WithTitle($"{collection.Name} ({items.Count()}/{collection.NumberOfItems})");
+            builder.WithColor(color);
+            foreach(var item in items.OrderBy(x=> x.Item.Rarity))
+            {
+                builder.AddField($"{item.Item.Name} ({item.Item.RarityName()}) -- x{item.Quantity}",$"- {item.Item.Description}");
+            }
+            builder.WithCurrentTimestamp();
+            return builder.Build();
+        }
 
-            builder.WithTitle(item.ToString());
-            if(item is Weapon)
-                builder.AddField((item as Weapon).GetMod(), item.Value);
-            if(item is Armor)
-                builder.AddField((item as Armor).GetMod(), item.Value);
-            foreach(Prefix pre in item.GetPrefixes())
-            {
-                builder.AddField(pre.Modifer,pre.Value,true);
-            }
-            foreach(Suffix suf in item.GetSuffixes())
-            {
-                builder.AddField(suf.Modifer,suf.Value,true);
-            }
-            builder.WithColor(Color.Purple);
+        private Embed BuildEmbed(Volume book)
+        {
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithTitle(book.VolumeInfo.Title);
+            builder.WithAuthor(String.Join(',',book.VolumeInfo.Authors));
+            builder.WithDescription(book.VolumeInfo.Description);
+            builder.AddField("Page Count",book.VolumeInfo.PageCount);
+            builder.WithUrl(book.VolumeInfo.InfoLink);
             return builder.Build();
         }
 

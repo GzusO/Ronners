@@ -33,6 +33,7 @@ namespace Ronners.Bot.Models
         Roulette,
         TicTacToe,
         Captcha,
-        Slurp
+        Slurp,
+        Daily
     }
 }

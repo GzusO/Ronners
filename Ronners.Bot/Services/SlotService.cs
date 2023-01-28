@@ -69,7 +69,7 @@ namespace Ronners.Bot.Services
             }
             else if(FirstReel == '♧' && FirstReel == SecondReel && SecondReel == ThirdReel)
             {
-                payout=7;       //♧ ♧ ♧
+                payout=8;       //♧ ♧ ♧
             }
             else if(FirstReel == '♡' && FirstReel == SecondReel && SecondReel == ThirdReel)
             {
@@ -77,7 +77,7 @@ namespace Ronners.Bot.Services
             }
             else if(FirstReel == 'ඞ' && FirstReel == SecondReel && SecondReel == ThirdReel)
             {
-                payout=750;     //ඞ ඞ ඞ
+                payout=769;     //ඞ ඞ ඞ
             }
             else if(FirstReel == '■' && FirstReel == SecondReel)
             {
@@ -113,12 +113,12 @@ namespace Ronners.Bot.Services
 $@"
           .-------. 
        oO[  {_multiplier:D3} X  ]Oo
-       .=============. __
-       |             |(  )
-       | [{FirstReel}] [{SecondReel}] [{ThirdReel}]| ||
-       |             | ||
-       | ■ ■ ■ ::::: |_||
-       | ඞඞඞ ::::: |--|
+       .=============.  __
+       |             | (  )
+       | [{FirstReel}] [{SecondReel}] [{ThirdReel}] | ||
+       |             |  ||
+       | ■ ■ ■ ::::: |__||
+       | ඞඞඞ  ::::: |---|
        | ♡♡♡  ::::: |
        | ♧♧♧  ::::: |
        | ♢♢♢  ::::: |

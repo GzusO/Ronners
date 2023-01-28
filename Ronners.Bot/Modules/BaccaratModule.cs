@@ -1,43 +1,36 @@
 using System.Threading.Tasks;
 using Discord;
-using Discord.Commands;
 using Ronners.Bot.Services;
 using System;
-
+using Discord.Interactions;
 
 namespace Ronners.Bot.Modules
 {
-    [Group("baccarat")]
-    public class BaccaratModule : ModuleBase<SocketCommandContext>
+    [Group("baccarat","Baccarat Game")]
+    public class BaccaratModule : InteractionModuleBase<SocketInteractionContext>
     {
         public GameService GameService{get;set;}
         public Random Rand{get;set;}
         public BaccaratService BaccaratService{get;set;}
 
-        [Command("bet")]
-        public async Task BetAsync(int betAmount, string bet)
+        [SlashCommand("bet","Bet at Baccarat")]
+        public async Task BetAsync([MinValue(1)]int betAmount, BaccaratBetType betType)
         {
             var user = await GameService.GetUserByID(Context.User.Id);
-            var betType = BaccaratService.GetBetType(bet);
 
             if(betAmount <= 0)
             {
-                await ReplyAsync("Bet must be greater than 0");
-                return;
-            }
-            if(betType == BaccaratBetType.Unknown)
-            {
-                await ReplyAsync("Unknown Bet Type");
+                await RespondAsync("Bet must be greater than 0");
                 return;
             }
             if(user is null)
             {
-                await ReplyAsync("Unable to find User");
+                await RespondAsync("Unable to find User");
                 return;
             }
             if(!await GameService.AddRonPoints(Context.User,-1*betAmount))
             {
-                await ReplyAsync("Not Enough Points");
+                await RespondAsync("Not Enough Points");
                 return;
             }
             
@@ -47,16 +40,16 @@ namespace Ronners.Bot.Modules
             await GameService.AddRonPoints(Context.User, winnings);
             if(winnings> 0 )
             {
-                await ReplyAsync($"{result}{user.Username} won {winnings} RonPoints!");
+                await RespondAsync($"{result}{user.Username} won {winnings} RonPoints!");
             }
             else
             {
-                await ReplyAsync($"{result}{user.Username} lost {betAmount} RonPoints!");
+                await RespondAsync($"{result}{user.Username} lost {betAmount} RonPoints!");
             }
         }
 
-        [Command("help")]
-        [Alias("?")]
+/**
+        [SlashCommand("help","Description of Baccarat.")]
         public async Task helpAsync()
         {
             var builder = new EmbedBuilder()
@@ -68,8 +61,8 @@ namespace Ronners.Bot.Modules
                 .AddField("Examples", "!baccarat bet 10 player\n!baccarat bet 10 banker\n!baccarat bet 10 tie");
             var embed = builder.Build();
 
-            await ReplyAsync("",false,embed);
+            await RespondAsync("",false,embed);
         }
-
+**/
     }
 }

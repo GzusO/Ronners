@@ -36,7 +36,7 @@ namespace Ronners.Bot.Services
             Games = new Dictionary<ulong, GameState>();
         }
 
-        public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
+        public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> arg1, Cacheable<IMessageChannel,ulong> arg2, SocketReaction arg3)
         {
             GameState game;
             var message = await arg1.GetOrDownloadAsync();

@@ -7,6 +7,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.IO;
+using SixLabors.ImageSharp.Formats.Png;
 
 namespace Ronners.Bot.Services
 {
@@ -19,6 +20,7 @@ namespace Ronners.Bot.Services
         private readonly GameService _game;
         private  List<ulong> _channels;
         private static string ImgPath;
+        private PngEncoder _encoder;
 
         public ImageService(IServiceProvider services)
         {
@@ -29,7 +31,13 @@ namespace Ronners.Bot.Services
 
             _channels = ConfigService.Config.WhitelistedChannel;
             ImgPath =Path.Combine(Directory.GetCurrentDirectory(),ConfigService.Config.ImgFolder);
-        }
+            _encoder = new PngEncoder();
+            _encoder.ChunkFilter = PngChunkFilter.ExcludeAll;
+            _encoder.FilterMethod = PngFilterMethod.Adaptive;
+            _encoder.InterlaceMethod =PngInterlaceMode.None;
+            _encoder.BitDepth = PngBitDepth.Bit8;
+            _encoder.ColorType =PngColorType.Rgb;
+            }
 
         public async Task MessageReceivedAsync(Discord.WebSocket.SocketMessage message)
         {
@@ -47,8 +55,8 @@ namespace Ronners.Bot.Services
                     var stream = await _webService.GetFileAsStream(attachment.Url);
                     var image = Image.Load<Rgba32>(stream);
                     EdgeDetect(image);
-                    await image.SaveAsync(Path.Combine(ImgPath,attachment.Filename));
-                    await message.Channel.SendFileAsync(Path.Combine(ImgPath,attachment.Filename),"Ronners!");
+                    await image.SaveAsPngAsync(Path.Combine(ImgPath,attachment.Filename),_encoder);
+                    await message.Channel.SendFileAsync(Path.ChangeExtension(Path.Combine(ImgPath,attachment.Filename),"png"),"Ronners!");
                     image.Dispose();
                 }
             }
@@ -57,8 +65,30 @@ namespace Ronners.Bot.Services
         public Image<Rgba32> EdgeDetect(Image<Rgba32> image)
         {
             image.Mutate(x => x.DetectEdges(KnownEdgeDetectorKernels.Sobel,false));
+            if(image.Height * image.Width * 4 > 8294400)
+            {
+                if(image.Height > 1080)
+                    image.Mutate(x => x.Resize(0,1080));
+                else if (image.Width > 1920)
+                    image.Mutate(x => x.Resize(1920,0));
+            }
+                
+            return image;
+        }
+        public Image<Rgba32> EdgeDetect(Stream stream)
+        {
+            var image = Image.Load<Rgba32>(stream);
             return image;
         }
 
+        public string EdgeDetectAndSave(Stream stream, string fileName)
+        {
+            var image = Image.Load<Rgba32>(stream);
+            image = EdgeDetect(image);
+            var filePath = Path.ChangeExtension(Path.Combine(ImgPath,fileName),"png");
+            image.SaveAsPngAsync(Path.Combine(filePath),_encoder);
+            image.Dispose();
+            return filePath;
+        }
     }
 }

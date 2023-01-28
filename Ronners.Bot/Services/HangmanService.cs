@@ -121,7 +121,7 @@ namespace Ronners.Bot.Services
             Started = false;
         }
 
-        public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> arg1, ISocketMessageChannel arg2, SocketReaction arg3)
+        public async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> arg1, Cacheable<IMessageChannel,ulong> arg2, SocketReaction arg3)
         {
             if(Started)
             {

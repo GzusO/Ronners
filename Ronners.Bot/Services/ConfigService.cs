@@ -41,7 +41,8 @@ namespace Ronners.Bot
             CommandPrefix = '!',
             WhitelistedChannel = new List<ulong>(){1234,5678},
             DatabaseConnection ="Data Source=sample.db;",
-            StockJson = "ronStock.json"
+            StockJson = "ronStock.json",
+            GoogleBooksKey = "INSERT KEY HERE"
         };
 
     }

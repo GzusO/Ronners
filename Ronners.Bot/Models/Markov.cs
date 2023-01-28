@@ -93,14 +93,21 @@ namespace Ronners.Bot.Models
             StringBuilder sb = new StringBuilder();
             var normalizedChain = NormalizeChain(Chain);
             
-            string key;
-            if(normalizedChain.ContainsKey(start))
-                key = start;
-            else
-                key = PickFirst(normalizedChain);
-            sb.Append(key);
+            sb.Append(start);
             sb.Append(" ");
+
+            var lastStartWord = start.Split(' ').Last();
             
+            string key;
+            if(normalizedChain.ContainsKey(lastStartWord))
+                key = lastStartWord;
+            else
+            {
+                key = PickFirst(normalizedChain);
+                sb.Append(key);
+                sb.Append(" ");
+            }
+                
             var count = 1;
             while(count < 140)
             {

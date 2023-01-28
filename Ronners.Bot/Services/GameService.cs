@@ -6,12 +6,21 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Discord;
 using Ronners.Bot.Models;
+using System;
+using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace Ronners.Bot.Services
 {
     public class GameService
     {
         public SqliteConnection connection {get;set;}
+        private readonly Random _rand;
+
+        public GameService(IServiceProvider services)
+        {
+            _rand = services.GetRequiredService<Random>();
+        }
 
         public async Task<User> GetUserByID(ulong id)
         {
@@ -129,6 +138,25 @@ namespace Ronners.Bot.Services
             await connection.QueryAsync(cmd,new{quantity = userRonStock.Quantity, id = userRonStock.UserID, symbol = userRonStock.Symbol});
         }
 
+        public async Task<UserDaily> GetUserDaily(IUser user)
+        {
+            var id = user.Id;
+
+            var cmd = string.Format("SELECT * FROM userdaily WHERE userid=@UserId");
+            return await connection.QueryFirstOrDefaultAsync<UserDaily>(cmd,new{UserId=id});
+        }
+
+        public async Task AddUserDaily(UserDaily userDaily)
+        {
+            var cmd = "INSERT INTO userdaily(userid,lastcheckin,streak) values(@UserId,@LastCheckIn,@Streak)";
+            await connection.ExecuteAsync(cmd, new{UserId=userDaily.UserID,LastCheckIn=userDaily.LastCheckIn,Streak=userDaily.Streak});
+        }
+        public async Task UpdateUserDaily(UserDaily userDaily)
+        {
+            var cmd = "UPDATE userdaily SET lastcheckin = @LastCheckIn, streak = @Streak WHERE userid = @UserId";
+            await connection.ExecuteAsync(cmd,new{UserId=userDaily.UserID,LastCheckIn=userDaily.LastCheckIn,Streak=userDaily.Streak});
+        }
+
         public async Task DeleteUserRonStock(UserRonStock userRonStock)
         {
             //Don't Delete if quantity isn't 0
@@ -166,6 +194,132 @@ namespace Ronners.Bot.Services
                 await UpdateUser(caller);
             }
             return true;
+        }
+
+        public async Task<RonState>GetRonState()
+        {
+            var cmd = "SELECT * FROM ronstate";
+            return await connection.QueryFirstAsync<RonState>(cmd);
+        }
+
+        public async Task<IEnumerable<(ulong threadId, ulong guildId)>> GetRonThreads()
+        {
+            var cmd = "SELECT DISTINCT threadid, guildid FROM ronthread";
+            return await connection.QueryAsync<(ulong,ulong)>(cmd);
+        }
+        public async Task AddRonThread(ulong threadId,ulong guildId)
+        {
+            var cmd = "INSERT INTO ronthread(threadid,guildid) values(@threadId,@guildId)";
+            await connection.ExecuteAsync(cmd,new{threadId,guildId});
+        }
+        public async Task RemoveRonThread(ulong threadId)
+        {
+            var cmd = "DELETE FROM ronthread WHERE threadid = @threadId";
+            await connection.ExecuteAsync(cmd,new{threadId});
+        }
+
+        public async Task<IEnumerable<Collection>> GetCollections()
+        {
+            var cmd = "SELECT DISTINCT Collection as Name, Count() as NumberOfItems from item GROUP BY Collection";
+            return await connection.QueryAsync<Collection>(cmd);
+        }
+        
+        public async Task<IEnumerable<Item>> GetItemsByCollection(string collection)
+        {
+            var cmd = "SELECT * FROM item WHERE lower(collection) = lower(@collection)";
+            return await connection.QueryAsync<Item>(cmd,new{collection});
+        }
+
+        public async Task AddUserItem(UserItem userItem)
+        {
+            var cmd = "INSERT INTO useritem(userid,itemid,quantity) values(@UserID,@ItemID,@Quantity)";
+            await connection.ExecuteAsync(cmd, new{UserID=userItem.UserID, ItemID =userItem.ItemID, Quantity=userItem.Quantity});
+        }
+
+        public async Task UpdateUserItem(UserItem userItem)
+        {
+            var cmd = "UPDATE userItem SET quantity = @Quantity WHERE userid = @UserID AND itemid = @ItemID";
+            await connection.ExecuteAsync(cmd, new {Quantity=userItem.Quantity,UserID=userItem.UserID, ItemID=userItem.ItemID});
+        }
+
+        public async Task AddItemToUser(Item item, IUser user)
+        {
+            var userItem = await GetUserItem(item.ItemID,user.Id);
+            if(userItem == null)
+            {
+                userItem = new UserItem(){
+                    UserID = user.Id,
+                    ItemID = item.ItemID,
+                    Quantity = 1
+                };
+                await AddUserItem(userItem);
+            }
+            //User already has the item increment quantity and update record.
+            else
+            {
+                userItem.Quantity++;
+                await UpdateUserItem(userItem);
+            }
+        }
+
+        public async Task<UserItem> GetUserItem(int ItemID, ulong UserID)
+        {
+            var cmd = "SELECT * FROM useritem WHERE ItemID=@ItemID AND UserID=@UserID";
+            return await connection.QueryFirstOrDefaultAsync<UserItem>(cmd, new{ItemID,UserID});
+        }
+
+        public async Task<IEnumerable<UserItemDetailed>> GetUsersItems(IUser user)
+        {
+            var cmd = "SELECT * FROM useritem WHERE UserID=@UserID";
+            var userItems = await connection.QueryAsync<UserItem>(cmd,new{UserID=user.Id});
+            var items = await GetItems();
+
+            var userItemsDetailed = new List<UserItemDetailed>();
+            foreach(var userItem in userItems)
+            {
+                userItemsDetailed.Add(new UserItemDetailed(userItem,items.First(x=> x.ItemID==userItem.ItemID)));
+            }
+            return userItemsDetailed;
+        }
+
+        public async Task<IEnumerable<Item>> GetItems()
+        {
+            var cmd ="SELECT * FROM item";
+            return await connection.QueryAsync<Item>(cmd);
+        }
+
+        public async Task<IEnumerable<Item>> PurchaseCollection(string collection, int quantity, IUser user)
+        {
+            var items = await GetItemsByCollection(collection);
+            var totalWeight = items.Sum(x=>x.RarityToWeight());
+            var receivedItems = new List<Item>();
+
+            for(int i = 0;i<quantity;i++)
+            {
+                receivedItems.Add(SelectRandomItem(items,totalWeight));
+            }
+            foreach(var item in receivedItems)
+            {
+                await AddItemToUser(item,user);
+            }
+            return receivedItems;
+        }
+
+        public Item SelectRandomItem(IEnumerable<Item> items, int totalWeight)
+        {
+            var val = _rand.Next(0,totalWeight);
+
+            Item selectedItem = null;
+            foreach(var item in items)
+            {
+                if(val < item.RarityToWeight())
+                {
+                    selectedItem = item;
+                    break;
+                }
+                val -= item.RarityToWeight();
+            }
+            return selectedItem;
         }
     }
 }

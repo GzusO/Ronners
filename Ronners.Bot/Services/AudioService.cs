@@ -3,14 +3,44 @@ using Discord;
 using System.Diagnostics;
 using Discord.Audio;
 using System.Collections.Concurrent;
+using System;
+using System.IO;
+using Ronners.Bot.Extensions;
+using System.Linq;
 
 namespace Ronners.Bot.Services
 {
     public class AudioService
     {
 
-        private readonly ConcurrentDictionary<ulong, IAudioClient> ConnectedChannels = new ConcurrentDictionary<ulong, IAudioClient>();
+        public string AudioPath{get;set;}
+        private readonly ConcurrentDictionary<string,string> AudioFiles = new ConcurrentDictionary<string, string>();
 
+        private readonly ConcurrentDictionary<ulong, IAudioClient> ConnectedChannels = new ConcurrentDictionary<ulong, IAudioClient>();
+        private readonly Random _rand;
+
+
+        public AudioService(Random rand)
+        {
+            AudioPath = Path.Combine(Directory.GetCurrentDirectory(),ConfigService.Config.AudioFolder);
+            _rand = rand;
+        }
+        public async Task InitializeAsync()
+        {
+            await GatherAvailableAudioFilesAsync();
+        }
+
+        private async Task GatherAvailableAudioFilesAsync()
+        {
+            foreach(var file in Directory.GetFiles(AudioPath,"*.mp3"))
+            {
+                var fileName = Path.GetFileNameWithoutExtension(file);
+                if(fileName != "ronners")
+                    fileName = fileName.Replace("ronners","").ToLower();
+                if(AudioFiles.TryAdd(fileName,file));
+                    await LoggingService.LogAsync("audio",LogSeverity.Info,$"Added '{file}' with Key: '{fileName}' as valid audio file.");
+            }
+        }
 
         public async Task JoinAudio(IGuild guild, IVoiceChannel target)
         {
@@ -44,18 +74,37 @@ namespace Ronners.Bot.Services
             }
         }
     
-        public async Task SendAudioAsync(IGuild guild, IMessageChannel channel, string path)
+        public async Task SendAudioAsync(IGuild guild, IMessageChannel channel, string audioFile)
         {
+            string filePath;
+            if(!AudioFiles.TryGetValue(audioFile,out filePath))
+            {
+                //Check for new files before giving up.
+                await GatherAvailableAudioFilesAsync();
+                if(!AudioFiles.TryGetValue(audioFile,out filePath))
+                    return;
+
+            }
 
             IAudioClient client;
             if (ConnectedChannels.TryGetValue(guild.Id, out client))
             {
-                //await Log(LogSeverity.Debug, $"Starting playback of {path} in {guild.Name}");
-                using (var ffmpeg = CreateProcess(path))
+                await LoggingService.LogAsync("audio",LogSeverity.Debug, $"Starting playback of {filePath} in {guild.Name}");
+                using (var ffmpeg = CreateProcess(filePath))
                 using (var stream = client.CreatePCMStream(AudioApplication.Music))
                 {
-                    try { await ffmpeg.StandardOutput.BaseStream.CopyToAsync(stream); }
-                    finally { await stream.FlushAsync(); }
+                    try 
+                    {
+                        await ffmpeg.StandardOutput.BaseStream.CopyToAsync(stream);
+                    }
+                    catch(Exception e)
+                    {
+                        await LoggingService.LogAsync("audio",LogSeverity.Error,"Error Occured",e);
+                    }
+                    finally 
+                    {  
+                        await stream.FlushAsync();
+                    }
                 }
             }
         }
@@ -65,11 +114,23 @@ namespace Ronners.Bot.Services
             return Process.Start(new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-hide_banner -loglevel panic -i {filename} -ac 2 -f s16le -ar 48000 pipe:1",
+                Arguments = $"-hide_banner -loglevel error -i {filename} -ac 2 -f s16le -ar 48000 pipe:1",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
             });
         }
 
+        public string GetRandomAudioFile()
+        {
+            return AudioFiles.Keys.ToList()[_rand.Next(AudioFiles.Keys.Count)];
+        }
+        public string[] GetAudioFiles()
+        {
+            return AudioFiles.Keys.ToArray();
+        }
+        public bool ValidFile(string audioFile)
+        {
+            return AudioFiles.ContainsKey(audioFile);
+        }
     }
 }

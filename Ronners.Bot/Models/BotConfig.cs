@@ -34,5 +34,8 @@ namespace Ronners.Bot.Models
         [JsonPropertyName("Ron Stock Json File")]
         public string StockJson{get;set;}
 
+        [JsonPropertyName("Google Books API Key")]
+        public string GoogleBooksKey{get;set;}
+
     }
 }
