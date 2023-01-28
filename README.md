@@ -10,8 +10,6 @@
 
 ## Building
 
-### NOTE: This Requires At-Least C# Version 9.0
-
 1. ``dotnet restore`` 
 2. ``dotnet build``
 
