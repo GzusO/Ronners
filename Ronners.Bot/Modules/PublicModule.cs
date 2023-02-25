@@ -31,6 +31,9 @@ namespace Ronners.Bot.Modules
         public CommandService _commandService {get;set;}
         public DiscordSocketClient _discord  {get;set;}
         public BookService BookService {get;set;}
+        public JellyFinService JellyFinService{get;set;}
+        public EconomyService _economyService{get;set;}
+        public AchievementService _achievementService{get;set;}
 
         private static string CaptchaPath = Path.Combine(Directory.GetCurrentDirectory(),ConfigService.Config.CaptchaFolder);
 
@@ -83,20 +86,23 @@ namespace Ronners.Bot.Modules
         [Summary("List the Best AMOUNT users.\nUSAGE: !best {AMOUNT}")]
         public async Task bestAsync(int count = 10)
         {
+            var allowedMentions = new AllowedMentions(null);
+            allowedMentions.MentionRepliedUser=true;
+
             var users = await GameService.GetUsers();
             var response = "";
             foreach(var user in users.OrderByDescending(p => p.RonPoints).Take(count))
             {
-
-                if(response.Length + user.PointString().Length > 2000)
+                
+                if(response.Length + $"{Discord.MentionUtils.MentionUser(user.UserId)}: {user.RonPoints}".Length > 2000)
                 {
                     await ReplyAsync(response);
                     response = "";
                 }
-                response += user.PointString()+"\n";
+                response += $"{Discord.MentionUtils.MentionUser(user.UserId)}: {user.RonPoints}"+"\n";
            
             }
-            await ReplyAsync(response);
+            await ReplyAsync(response,messageReference:Context.Message.Reference,allowedMentions:allowedMentions);
         }
 
 
@@ -142,55 +148,29 @@ namespace Ronners.Bot.Modules
 
         [Command("daily")]
         [Summary("Daily Rewards.\nUSAGE: !daily")]
-        public async Task<RuntimeResult> dailyAsync()
+        public async Task dailyAsync(string test = "")
         {
+            bool testing = !string.IsNullOrWhiteSpace(test);
             var user = Context.User;
-
-            UserDaily daily = await GameService.GetUserDaily(user);
-
-            if (daily is null)
-            {
-                daily = new UserDaily(){UserID=user.Id,LastCheckIn = 0,Streak =0};
-                await GameService.AddUserDaily(daily);
-            }
-
-            int daysSinceLastCheckIn = (DateTime.UtcNow.Date - DateTimeOffset.FromUnixTimeSeconds(daily.LastCheckIn).Date).Days;
-            daily.LastCheckIn = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            await LoggingService.LogAsync("bot",LogSeverity.Info,$"Days Since last check in:{daysSinceLastCheckIn}");
-
-            //Same Day
-            if (daysSinceLastCheckIn < 1)
-            {
-                return AchievementResult.FromError("Already claimed Daily!");
-            }
-            
-            if(daysSinceLastCheckIn == 1)
-                daily.Streak++;
+            DailyResult result;
+            if(testing)
+                result = await _economyService.TestDaily(user);
             else
-                daily.Streak = 1;
+                result = await _economyService.Daily(user);
 
-            await GameService.UpdateUserDaily(daily);
-            
-            int reward = Rand.Next(100,200);
-            reward += (int)Math.Round(reward*((daily.Streak-1)/100.0));
+            if(!result.Success)
+            {
+                await ReplyAsync(result.ErrorMessage);
+                return;
+            }
 
-            int balance = (await GameService.GetUserByID(user.Id)).RonPoints;
-            double interestRate = .01;
-            int interest = (int)Math.Round(balance*interestRate);
-
-            await GameService.AddRonPoints(user,reward+interest);
-
-            string resp = $"{user.Username} is on a {daily.Streak} day streak!\nDaily Bonus: {reward} RonPoints.\n Daily Interest: {interest} RonPoints.";
-            
-            await ReplyAsync(resp);
+            await ReplyAsync($"{(testing ? "Test Run":"")}",false,CustomEmbeds.BuildEmbed(user,result));
 
             var achievementResult = AchievementResult.FromSuccess();
-
             achievementResult.AchievementType = AchievementType.Daily;
-            achievementResult.IntValue = daily.Streak;
+            achievementResult.IntValue = result.Streak;
             achievementResult.User = Context.User;
-
-            return achievementResult;
+            _achievementService.ProcessMessage(achievementResult);
         }
 
         [Command("draw")]
@@ -274,6 +254,8 @@ namespace Ronners.Bot.Modules
         public async Task giveAsync(IUser user, int amount)
         {
             var giver = Context.User;
+            var allowedMentions = new AllowedMentions(null);
+            allowedMentions.MentionRepliedUser=true;
 
             if(amount <0)
             {
@@ -286,14 +268,13 @@ namespace Ronners.Bot.Modules
             {
                 //Grant points to receiver
                 await GameService.AddRonPoints(user,amount);
-                await ReplyAsync ($"{giver.Mention} gave {amount} RonPoints to {user.Mention}.");
+                await ReplyAsync ($"{giver.Mention} gave {amount} RonPoints to {user.Mention}.",allowedMentions:allowedMentions);
             }
             else
             {
                 await ReplyAsync($"You do not have enough points.");
                 return;
             }
-
         }
         
         [Command("markov")]
@@ -368,7 +349,7 @@ namespace Ronners.Bot.Modules
             {
                 await ReplyAsync(string.Format("Failed to retrieve stock information for {0}",ticker));
             }
-            await ReplyAsync("",false,BuildEmbed(quote));
+            await ReplyAsync("",false,CustomEmbeds.BuildEmbed(quote));
         }
 
         [Command("book")]
@@ -380,7 +361,7 @@ namespace Ronners.Bot.Modules
             {
                 await ReplyAsync(string.Format("Failed to find a book matching: {0}",query));
             }
-            await ReplyAsync("",false,BuildEmbed(book));
+            await ReplyAsync("",false,CustomEmbeds.BuildEmbed(book));
         }
 
         [Command("attribution")]
@@ -822,88 +803,38 @@ namespace Ronners.Bot.Modules
             var builder = new ComponentBuilder()
             .WithSelectMenu(menuBuilder);
     
-            await Context.Message.ReplyAsync($"{user.Username}'s Gacha Collection",false,BuildEmbed(items,collections),components:builder.Build());
+            await Context.Message.ReplyAsync($"{user.Username}'s Gacha Collection",false,CustomEmbeds.BuildEmbed(items,collections),components:builder.Build());
         }
 
-        private Embed BuildEmbed(IEnumerable<UserItemDetailed> items, IEnumerable<Collection> collections)
-        {  
-            var collectionDict = new Dictionary<string,int>();
-            foreach(var collection in collections)
-            {
-                collectionDict.Add(collection.Name,0);
-            }
-            var groupedItems = items.GroupBy(x=> x.Item.Collection);
-            foreach(var group in groupedItems)
-            {
-                if(collectionDict.ContainsKey(group.Key))
-                    collectionDict[group.Key] +=group.Count();
-                else
-                    collectionDict.Add(group.Key,group.Count());
-            }
-            var totalItems = collections.Sum(x=> x.NumberOfItems);
-            var collectedItems = items.Count();
-
-            var completion = (double)collectedItems/totalItems;
-            var color = new Color(Convert.ToByte((1-completion)*255), Convert.ToByte(completion*255),Convert.ToByte(0));
-            
-            
-            EmbedBuilder builder = new EmbedBuilder();
-            builder.WithTitle($"{collectedItems}/{totalItems} Unique Items Collected");
-            builder.WithColor(color);
-            foreach(var collection in collectionDict)
-            {
-                builder.Description+= $"- {collection.Key} ( {collection.Value} / {collections.First(x=> x.Name==collection.Key).NumberOfItems} )\n";
-            }
-
-            builder.WithCurrentTimestamp();
-            return builder.Build();
-        }
-
-        private Embed BuildEmbed(IEnumerable<UserItemDetailed> items,Collection collection)
+        [Command("test",RunMode = RunMode.Async)]
+        public async Task testAsync([Remainder]string id = "")
         {
-            EmbedBuilder builder = new EmbedBuilder();
-            var completion = (double)items.Count()/collection.NumberOfItems;
-            var color = new Color(Convert.ToByte((1-completion)*255), Convert.ToByte(completion*255),Convert.ToByte(0));
-            builder.WithTitle($"{collection.Name} ({items.Count()}/{collection.NumberOfItems})");
-            builder.WithColor(color);
-            foreach(var item in items.OrderBy(x=> x.Item.Rarity))
+            if(AudioService.CurrentlyPlaying(Context.Guild))
             {
-                builder.AddField($"{item.Item.Name} ({item.Item.RarityName()}) -- x{item.Quantity}",$"- {item.Item.Description}");
+                await ReplyAsync("Currently playing a song please wait.");
+                return;
             }
-            builder.WithCurrentTimestamp();
-            return builder.Build();
-        }
-
-        private Embed BuildEmbed(Volume book)
-        {
-            EmbedBuilder builder = new EmbedBuilder();
-            builder.WithTitle(book.VolumeInfo.Title);
-            builder.WithAuthor(String.Join(',',book.VolumeInfo.Authors));
-            builder.WithDescription(book.VolumeInfo.Description);
-            builder.AddField("Page Count",book.VolumeInfo.PageCount);
-            builder.WithUrl(book.VolumeInfo.InfoLink);
-            return builder.Build();
-        }
-
-        private Embed BuildEmbed(StockQuoteIEX quote)
-        {
-            EmbedBuilder builder = new EmbedBuilder();
-            bool Up = quote.ChangePercent < 0;
-            builder.WithTitle(quote.CompanyName);
-            builder.AddField("Ticker",quote.Symbol);
-            //builder.AddField("Price",string.Format("${0} \n{1} ({2}%)",quote.LatestPrice,quote.Change,quote.ChangePercent));
-            builder.AddField("Price",string.Format("{0:c4}",quote.LatestPrice),true);
-            builder.AddField("Change",string.Format("{0:0.00#################}",quote.Change),true);
-            builder.AddField("Percent Change",string.Format("{0}%",quote.ChangePercent),true);
-            builder.WithTimestamp(DateTimeOffset.FromUnixTimeMilliseconds((Int64)quote.LatestUpdate));
-            builder.WithFooter("Stock Data provided by IEX Cloud https://iexcloud.io");
-            if(quote.ChangePercent < 0)
-                builder.WithColor(Color.Red);
-            else if(quote.ChangePercent > 0)
-                builder.WithColor(Color.Green);
+            Models.JellyFin.Item song;
+            if(string.IsNullOrWhiteSpace(id))
+                song = await JellyFinService.Random();
             else
-                builder.WithColor(Color.LightGrey);
-            return builder.Build();
+                song = await JellyFinService.GetSongByID(id);
+            var response = await ReplyAsync("Now Playing:",false, CustomEmbeds.BuildEmbed(song));
+            await AudioService.JellyFinPlay(Context.Guild,Context.Channel,song.Id);
+            await response.ModifyAsync(x=> x.Content="Finished Playing:");
+        }
+
+        [Command("stop")]
+        public async Task stopAsyync()
+        {
+            AudioService.Stop(Context.Guild);
+        }
+
+        [Command("completed")]
+        public async Task completedAsync()
+        {
+            int count = await GameService.GetUserCompletedCollectionCount(Context.User);
+            await ReplyAsync($"You have completed {count} collections.");
         }
     }
 }

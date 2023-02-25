@@ -42,7 +42,9 @@ namespace Ronners.Bot
             WhitelistedChannel = new List<ulong>(){1234,5678},
             DatabaseConnection ="Data Source=sample.db;",
             StockJson = "ronStock.json",
-            GoogleBooksKey = "INSERT KEY HERE"
+            GoogleBooksKey = "INSERT KEY HERE",
+            JellyfinKey = "INSERT KEY HERE",
+            JellyFinUserID = "INSERT ID HERE"
         };
 
     }

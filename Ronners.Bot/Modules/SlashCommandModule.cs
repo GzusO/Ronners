@@ -20,6 +20,7 @@ namespace Ronners.Bot.Modules
         public WebService _webService{get;set;}
         public ImageService _imageService{get;set;}
         public GameService GameService{get;set;}
+        public BattleService _battleService{get;set;}
 
 
         // Slash Commands are declared using the [SlashCommand], you need to provide a name and a description, both following the Discord guidelines
@@ -27,30 +28,6 @@ namespace Ronners.Bot.Modules
         public async Task Ping ( )
         {
             await RespondAsync("pong");
-        }
-        [SlashCommand("compact", "Compact Embeds")]
-        [RequireRole("Admin")]
-        public async Task Compact(IMessageChannel channel)
-        {
-            var messages = await channel.GetMessagesAsync(2).FlattenAsync();
-            await RespondAsync(":thumbsup:",ephemeral:true);
-            foreach(var message in messages)
-            {
-                if (message.Source != MessageSource.User)
-                    continue;
-
-                if(message.Embeds.Count == 0)
-                    continue;
-                foreach(var embed in message.Embeds)
-                {
-                    if(embed.Type == EmbedType.Video)
-                    {
-                        var newMessage = await channel.SendMessageAsync(string.Format("[{0}: {1}]",embed.Title,embed.Url));
-                        await newMessage.ModifyAsync(x=> x.Flags = MessageFlags.SuppressEmbeds);
-                    }
-                   await LoggingService.LogAsync("RONR",LogSeverity.Debug,$"Embed Type: {embed.Type} Embed Title: {embed.Title} Embed Url: {embed.Url}");
-                }
-            }
         }
 
         [SlashCommand("button","Button demo")]
@@ -66,22 +43,31 @@ namespace Ronners.Bot.Modules
             await RespondAsync("Here is a button.",components:builder.Build());
         }
 
-        [SlashCommand("gift", "Give a gift")]
-        public async Task Gift (SocketGuildUser user, string message)
+        [SlashCommand("battle","Battle Demo")]
+        public async Task BattleAsync([Choice("Random",""),Choice("Stick","Stick"), Choice("Rusty Nail","Rusty Nail"), Choice("None","Fists")] string weapon ="",int ronners = 9,int objectivity = 1, int normalcy = 1, int nutrition = 1, int erudition = 1, int rapidity = 0, int strength = 1)
         {
-            try
-            {
-                var channel = await user.CreateDMChannelAsync();
-                await channel.SendMessageAsync(message);
+            var results = _battleService.Demo(Context.User.Username, ronners,objectivity,normalcy,nutrition,erudition,rapidity,strength, weapon);
 
-                await RespondAsync("Sent the gift!",null,false,true);
-            }
-            catch (Discord.Net.HttpException e)
-            {
-                await RespondAsync("Failed to send gift.",null,false,true);
-            }
-                
+            var playerWeapon = results.Player.HandSlot is null ? "" : results.Player.HandSlot.Name;
+            await RespondAsync(embed: CustomEmbeds.BuildEmbed(results.Logs,$"{results.Player.Name} with {playerWeapon} vs. {results.Enemy.Name}"));
         }
+
+        // [SlashCommand("gift", "Give a gift")]
+        // public async Task Gift (SocketGuildUser user, string message)
+        // {
+        //     try
+        //     {
+        //         var channel = await user.CreateDMChannelAsync();
+        //         await channel.SendMessageAsync(message);
+
+        //         await RespondAsync("Sent the gift!",null,false,true);
+        //     }
+        //     catch (Discord.Net.HttpException e)
+        //     {
+        //         await RespondAsync("Failed to send gift.",null,false,true);
+        //     }
+                
+        // }
 
         [MessageCommand("ronify")]
         public async Task Ronify(IMessage message)

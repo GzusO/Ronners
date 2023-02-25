@@ -57,6 +57,8 @@ namespace Ronners.Bot.Services
             await LoggingService.LogAsync("bot",Discord.LogSeverity.Info,$"Game tick: {gameTick}");
             if(gameTick == 0)
             {
+                await ReturnPoints();
+
                 await LoggingService.LogAsync("bot",Discord.LogSeverity.Info,$"Update tick");
                 if(state.Health < 75)
                 {
@@ -86,6 +88,27 @@ namespace Ronners.Bot.Services
             await SetDiscordState();
         }
 
+        private async Task ReturnPoints()
+        {
+            var gifts = await _game.GetRonGiftsNotReturned();
+            long time = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            foreach(var gift in gifts.Where(x=> x.ReturnDate <= time))
+            {
+                await _game.ReturnGift(gift.RonGiftID);
+
+                var user = await _discord.GetUserAsync(gift.UserID);
+                await _game.AddRonPoints(user, gift.ReturnPoints);
+                try
+                {
+                    await user.SendMessageAsync($"Ronners has return to you {gift.ReturnPoints} RonPoints.");
+                }
+                catch(Exception e)
+                {
+
+                }
+            }
+        }
         private async void RandomEvent()
         {
             var randomEvent = _rand.Next(0,180);

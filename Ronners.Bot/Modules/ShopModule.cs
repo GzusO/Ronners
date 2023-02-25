@@ -96,40 +96,12 @@ namespace Ronners.Bot.Modules
             foreach(var item in items)
             {
 
-                embedItems.Add(BuildEmbed(item));
+                embedItems.Add(CustomEmbeds.BuildEmbed(item));
            
             }
             await ReplyAsync("You have received the following items.",embeds: embedItems.ToArray());
         }
-        private Embed BuildEmbed(Item item)
-        {
-            EmbedBuilder builder = new EmbedBuilder();
-            builder.WithTitle(item.ToString());
-            builder.WithDescription(item.Description);
-            builder.WithColor(RarityToColor(item.Rarity));
-            return builder.Build();
-        }
 
-        private Color RarityToColor(Rarity rare)
-        {
-            switch(rare)
-          {
-            case Rarity.Common:
-              return Color.DarkBlue;
-            case Rarity.Uncommon:
-              return Color.LighterGrey;
-            case Rarity.Rare:
-              return Color.Orange;
-            case Rarity.SuperRare:
-              return Color.Teal;
-            case Rarity.UltraRare:
-              return Color.Purple;
-            default:
-              return Color.Red;
-          }
-                
-
-        }
 
     }
 }

@@ -36,6 +36,10 @@ namespace Ronners.Bot.Models
 
         [JsonPropertyName("Google Books API Key")]
         public string GoogleBooksKey{get;set;}
+        [JsonPropertyName("JellyFin API Key")]
+        public string JellyfinKey{get;set;}
+        [JsonPropertyName("JellyFin User ID")]
+        public string JellyFinUserID{get;set;}
 
     }
 }

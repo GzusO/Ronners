@@ -9,6 +9,7 @@ using Ronners.Bot.Models;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
+using Discord.WebSocket;
 
 namespace Ronners.Bot.Services
 {
@@ -320,6 +321,40 @@ namespace Ronners.Bot.Services
                 val -= item.RarityToWeight();
             }
             return selectedItem;
+        }
+
+        public async Task<int> AddRonnersGift(RonGift gift)
+        {
+            var cmd = "INSERT INTO rongifts(ReceivedDate, ReturnDate, ReceivedPoints, ReturnPoints, UserID, Returned) values(@ReceivedDate, @ReturnDate, @ReceivedPoints, @ReturnPoints, @UserID, @Returned)";
+            return await connection.ExecuteAsync(cmd, new {gift.ReceivedDate,gift.ReturnDate,gift.ReceivedPoints,gift.ReturnPoints,gift.UserID,gift.Returned});
+        }
+
+        public async Task<IEnumerable<RonGift>> GetRonGiftsNotReturned()
+        {
+            var cmd = "SELECT * FROM rongifts WHERE Returned = 0";
+            return await connection.QueryAsync<RonGift>(cmd);
+        }
+
+        public async Task ReturnGift(int ronGiftID)
+        {
+            var cmd = "UPDATE rongifts SET Returned = 1 WHERE RonGiftID = @ronGiftID";
+            await connection.ExecuteAsync(cmd,new {ronGiftID});
+        }
+
+        internal async Task<int> GetUserCompletedCollectionCount(IUser user)
+        {
+            var items = await GetUsersItems(user);
+            var collections = await GetCollections();
+
+            int completedCollections = 0;
+            foreach(var collection in collections)
+            {
+                if(items.Where(x=> x.Item.Collection == collection.Name).Count() == collection.NumberOfItems)
+                    completedCollections++;
+            }
+
+            return completedCollections;
+
         }
     }
 }

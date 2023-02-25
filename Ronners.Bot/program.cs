@@ -472,6 +472,15 @@ namespace Ronners.Bot
                 cmd = new SqliteCommand(string.Format(cmdTextVersionUpdate,++version),conn);
                 cmd.ExecuteNonQuery();
             }
+            if(version < 24)
+            {
+                var sqlString = @"CREATE TABLE rongifts(RonGiftID INTEGER PRIMARY KEY, ReceivedDate INTEGER, ReturnDate INTEGER, ReceivedPoints INTEGER, ReturnPoints INTEGER, UserID INTEGER, Returned INTEGER)";
+                cmd = new SqliteCommand(sqlString,conn);
+                cmd.ExecuteNonQuery();
+
+                cmd = new SqliteCommand(string.Format(cmdTextVersionUpdate,++version),conn);
+                cmd.ExecuteNonQuery();
+            }
 
 
             cmd = new SqliteCommand(String.Format(cmdTextVersionUpdate,version),conn);
@@ -512,7 +521,9 @@ namespace Ronners.Bot
                 .AddSingleton<SlotService>()
                 .AddSingleton<RonStockMarketService>()
                 .AddSingleton<RonService>()
-                //.AddSingleton<LootGenerator>(_ => new LootGenerator("TestData/"))
+                .AddSingleton<JellyFinService>()
+                .AddSingleton<EconomyService>()
+                .AddSingleton<BattleService>()
                 .BuildServiceProvider();
         }
 
