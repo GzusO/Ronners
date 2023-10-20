@@ -4,6 +4,7 @@ using Discord;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Ronners.Bot.Models;
 using Ronners.Bot.Services;
 
 
@@ -15,6 +16,8 @@ namespace Ronners.Bot.Modules
     {
         public CommandService _commandService {get;set;}
         public InteractionService _interactionService {get;set;}
+        public GameService _gameService{get;set;}
+        public AdminService _adminService{get;set;}
 
 
         [Command("help")]
@@ -47,6 +50,16 @@ namespace Ronners.Bot.Modules
         public async Task SlashCommandAddAsync()
         {
             await _interactionService.RegisterCommandsToGuildAsync(Context.Guild.Id);
+        }
+
+        [Command("addMod")]
+        [Discord.Commands.Summary("Adds Ronners Moderation to the channel. USAGE: !admin addMod {level} {#Channel}")]
+        public async Task AddModerationLevel(int level, IChannel channel = null)
+        {
+            channel = channel != null ? channel : Context.Channel;
+
+            await _gameService.AddModerationLevel(level, channel.Id);
+            _adminService.ChannelModerationLevel.Add(channel.Id,new ChannelModeration(){ChannelID=channel.Id,ModerationLevel=1});
         }
     }
 }

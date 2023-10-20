@@ -38,6 +38,7 @@ namespace Ronners.Bot.Services
 
             UserDaily daily = await _gameService.GetUserDaily(user);
             int completedCollections = await _gameService.GetUserCompletedCollectionCount(user);
+            int uniqueItemsCollected = await _gameService.GetUserUniqueItemsCollected(user);
 
             if (daily is null)
             {
@@ -53,9 +54,9 @@ namespace Ronners.Bot.Services
             {
                 DateTime now = DateTime.UtcNow;
                 DateTime nextDay = now.Date.AddDays(1);
-                TimeSpan timeToNewDay = nextDay-now;
+                var unix = ((DateTimeOffset)nextDay).ToUnixTimeSeconds();
                 result.Success = false;
-                result.ErrorMessage = $"Already claimed Daily. Please wait {timeToNewDay.ToString("hh\\:mm\\:ss")}";
+                result.ErrorMessage = $"Already claimed daily reward. Available <t:{unix}:R>";
             }
             else
             {
@@ -65,7 +66,7 @@ namespace Ronners.Bot.Services
                     daily.Streak = 1;
                 
 
-                result.CalculateDaily((await _gameService.GetUserByID(user.Id)).RonPoints,daily.Streak,completedCollections);
+                result.CalculateDaily((await _gameService.GetUserByID(user.Id)).RonPoints,daily.Streak,completedCollections,uniqueItemsCollected);
 
                 if(!testing)
                 {

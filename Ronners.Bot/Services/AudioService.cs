@@ -38,8 +38,8 @@ namespace Ronners.Bot.Services
                 var fileName = Path.GetFileNameWithoutExtension(file);
                 if(fileName != "ronners")
                     fileName = fileName.Replace("ronners","").ToLower();
-                if(AudioFiles.TryAdd(fileName,file));
-                    await LoggingService.LogAsync("audio",LogSeverity.Info,$"Added '{file}' with Key: '{fileName}' as valid audio file.");
+                if(AudioFiles.TryAdd(fileName,file))
+                    await LoggingService.LogAsync("audio",LogSeverity.Info,$"Added '{Path.GetFileName(file)}' with Key: '{fileName}' as valid audio file.");
             }
         }
 

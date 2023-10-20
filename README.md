@@ -4,9 +4,8 @@
 
 ## Built With
 
-* [DotNet (Version - 5.0)](https://dotnet.microsoft.com/download/dotnet/5.0) - Dotnet version.
-* [Discord.Net (Version - 2.3.1)](https://github.com/discord-net/Discord.Net) - The Discord Library.
-* [ImageSharp (Version - 1.0.3)](https://github.com/SixLabors/ImageSharp) - Image Processing Library.
+* [Discord.Net (Version - 3.12.0)](https://github.com/discord-net/Discord.Net) - The Discord Library.
+* [ImageSharp (Version - 2.1.3)](https://github.com/SixLabors/ImageSharp) - Image Processing Library.
 
 ## Building
 

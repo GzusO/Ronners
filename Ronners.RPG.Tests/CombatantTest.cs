@@ -142,5 +142,4 @@ public class CombatantTest
 
         Assert.Equal(expected,actual);
     }
-
 }

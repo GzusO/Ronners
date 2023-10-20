@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Reflection;
 using System.ComponentModel;
+using Ronners.Bot.Models;
 
 namespace Ronners.Bot.Extensions
 {
@@ -108,6 +109,33 @@ namespace Ronners.Bot.Extensions
                 return attributes[0].Description;
             else
                 return value.ToString();
+        }
+
+        public static int GetBlackJackCardValue(this Card card)
+        {
+            switch(card.number)
+            {
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                case 8: 
+                case 9:
+                case 10:
+                    return card.number;
+                case 1:
+                    return 11;
+                case 11:
+                    return 10;
+                case 12:
+                    return 10;
+                case 13:
+                    return 10;
+                default:
+                    return 0;
+            }
         }
     }
        

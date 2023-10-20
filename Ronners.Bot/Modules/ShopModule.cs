@@ -77,19 +77,21 @@ namespace Ronners.Bot.Modules
                 return;
             }
 
-            var collections = await GameService.GetCollections();
-            if(collections.Where(x=> x.Name.ToLower() == collectionName.ToLower()).Count()==0)
+            var collections = (await GameService.GetCollections()).Where(x=>x.Name.ToLower() == collectionName.ToLower());
+
+            if(collections.Count() == 0)
             {
                 await ReplyAsync($"Collection: {collectionName} doesn't exist.");
                 return;
             }
-            if(!await GameService.AddRonPoints(Context.User,-50*quantity))
+            var collection = collections.First();
+            if(!await GameService.AddRonPoints(Context.User,-1*collection.Cost*quantity))
             {
-                await ReplyAsync($"Not Enough Points! Costs {50*quantity} RonPoints.");
+                await ReplyAsync($"Not Enough Points! Costs {collection.Cost*quantity} RonPoints.");
                 return;
             }
             var items = await GameService.PurchaseCollection(collectionName,quantity,Context.User);
-            items = items.OrderBy(x=> x.Rarity);   
+            items = items.OrderByDescending(x=> x.Rarity);   
             var response = $"";
             
             var embedItems = new List<Embed>();

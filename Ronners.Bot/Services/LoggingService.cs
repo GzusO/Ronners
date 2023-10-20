@@ -65,6 +65,7 @@ namespace Ronners.Bot.Services
                 "bot"       => "RONRS",
                 "audio"     => "AUDIO",
                 "ronstock"  => "MARKT",
+                "politics"  => "POLIT",
                 _           => source
             };
         }

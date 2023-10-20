@@ -40,6 +40,10 @@ namespace Ronners.Bot.Models
         public string JellyfinKey{get;set;}
         [JsonPropertyName("JellyFin User ID")]
         public string JellyFinUserID{get;set;}
+        [JsonPropertyName("Lancer Content Pack")]
+        public string LCP{get;set;}
+        [JsonPropertyName("Fish Data Json File")]
+        public string FishJson{get;set;}
 
     }
 }

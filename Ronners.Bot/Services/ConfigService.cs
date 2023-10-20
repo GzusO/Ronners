@@ -44,7 +44,9 @@ namespace Ronners.Bot
             StockJson = "ronStock.json",
             GoogleBooksKey = "INSERT KEY HERE",
             JellyfinKey = "INSERT KEY HERE",
-            JellyFinUserID = "INSERT ID HERE"
+            JellyFinUserID = "INSERT ID HERE",
+            LCP= "LCP",
+            FishJson="fish.json"
         };
 
     }

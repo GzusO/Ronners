@@ -5,6 +5,8 @@ namespace Ronners.Bot.Models
     public class Collection
     {
         public string Name{get;set;}
+        public int CollectionID {get;set;}
+        public int Cost {get;set;}
         public int NumberOfItems{get;set;}
 
         public Collection()
@@ -14,7 +16,7 @@ namespace Ronners.Bot.Models
 
         public override string ToString()
         {
-            return Name;
+            return $"{Name} - {Cost} RP";
         }
     }
 }

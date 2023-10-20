@@ -9,44 +9,28 @@ namespace Ronners.Bot.Models
         public int ItemID { get; set; }
         public string Name { get; set; }
         public string Collection { get; set; }
-        public Rarity Rarity { get; set; }
+        public int Rarity { get; set; }
         public string Description { get; set; }
+        public int CollectionID {get;set;}
         public Item()
         {
 
         }
 
-        public int RarityToWeight()
-        {
-            switch (Rarity)
-            {
-                case Rarity.Common:
-                    return 15;
-                case Rarity.Uncommon:
-                    return 10;
-                case Rarity.Rare:
-                    return 8;
-                case Rarity.SuperRare:
-                    return 5;
-                case Rarity.UltraRare:
-                    return 1;
-                default:
-                    return 1;
-            }
-        }
         public string RarityName()
         {
+
             switch (Rarity)
             {
-                case Rarity.Common:
+                case >=15:
                     return "Common";
-                case Rarity.Uncommon:
+                case >=10:
                     return "Uncommon";
-                case Rarity.Rare:
+                case >=8:
                     return "Rare";
-                case Rarity.SuperRare:
+                case >=5:
                     return "Super Rare";
-                case Rarity.UltraRare:
+                case >=1:
                     return "Ultra Rare";
                 default:
                     return "Unknown";
@@ -92,13 +76,5 @@ namespace Ronners.Bot.Models
         }
 
         public static bool operator !=(Item lhs, Item rhs) => !(lhs == rhs);
-    }
-    public enum Rarity
-    {
-        Common,
-        Uncommon,
-        Rare,
-        SuperRare,
-        UltraRare
     }
 }

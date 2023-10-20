@@ -58,6 +58,9 @@ namespace Ronners.Bot.Services
             if (!(rawMessage is SocketUserMessage message)) return;
             if (message.Source != MessageSource.User) return;
 
+            if(message.Author.Id == 146979125675032576)//Block squirtle
+                return;
+
             if(_rand.Next(0,10) == 0)
             {
                 SocketGuild guild = ((SocketGuildChannel)rawMessage.Channel).Guild;

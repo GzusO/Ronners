@@ -2,7 +2,7 @@ namespace Ronners.RPG;
 
 public class Combatant 
 {
-    public int UserID {get;set;}
+    public ulong UserID {get;set;}
     public string Name {get;set;}
     public int Ronners {get;set;}
     public int Objectivity {get;set;}
@@ -25,6 +25,7 @@ public class Combatant
     public int CurrentHealth{get;set;}
 
     public Weapon? HandSlot {get;set;}
+    public long Experience {get;set;} = 0;
 
 
     public Combatant(int ronners=1, int objectivity=1, int normalcy=1, int nutrition=1, int erudition=1, int rapidity=1, int strength=1)

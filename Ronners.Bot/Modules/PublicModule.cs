@@ -10,6 +10,7 @@ using Ronners.Bot.Extensions;
 using Ronners.Bot.Models;
 using Discord.WebSocket;
 using Ronners.Bot.Models.GoogleBooks;
+using System.Text;
 
 namespace Ronners.Bot.Modules
 {
@@ -25,9 +26,7 @@ namespace Ronners.Bot.Modules
         public Random Rand{get;set;}
         public CaptchaService CaptchaService{get;set;}
         public AudioService AudioService{get;set;}
-
         public MarkovService MarkovService{get;set;}
-
         public CommandService _commandService {get;set;}
         public DiscordSocketClient _discord  {get;set;}
         public BookService BookService {get;set;}
@@ -59,6 +58,16 @@ namespace Ronners.Bot.Modules
             int pageCount = (commandCount + 24)/ 25;
 
             await ReplyAsync($"Commands Page [{page}/{pageCount}]: ", false, embedBuilder.Build());
+        }
+
+        [Command("dump")]
+        public async Task Dump()
+        {
+                var messages = Context.Channel.GetMessagesAsync(500);
+                var flat = await messages.FlattenAsync();
+                foreach(var message in flat)
+                    File.AppendAllText("Dump.txt",$"{message.Content}\n");
+
         }
 
         [Command("achievements")]
@@ -293,6 +302,7 @@ namespace Ronners.Bot.Modules
         }
 
         [Command("purge")]
+        [Discord.Commands.RequireOwner]
         [Summary("Purges Ronner's Markovian Model, Cost 100rp.\nUSAGE: !purge")]
         public async Task purgeAsync()
         {
@@ -304,6 +314,35 @@ namespace Ronners.Bot.Modules
 
             MarkovService.Purge();
             await ReplyAsync("Markov Brain Purged, Ronners!");
+        }
+        [Command("inspect")]
+        [Summary("Get details of proceeding tokens in the markov model.\nUSAGE: !inspect {word} {amount}")]
+        public async Task markovDump(string token, int count=0)
+        {
+            var result = MarkovService.GetPossibleTokens(token.ToLowerInvariant().Trim());
+            StringBuilder stringBuilder = new StringBuilder();
+            
+            var listOfTokens = result.ToList().OrderByDescending(x=> x.Value);
+
+            foreach(var kvp in listOfTokens)
+            {
+                if(stringBuilder.Length < 4000)
+                    stringBuilder.Append($"{kvp.Key} : {kvp.Value}\n");
+                else
+                    break;
+            }
+
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.WithTitle(token.ToLowerInvariant().Trim());
+            builder.WithDescription(stringBuilder.ToString());
+            await ReplyAsync("",embed:builder.Build());
+        }
+        [Command("words")]
+        [Summary("Get count of unique 'words' in the markov model.\nUSAGE: !words")]
+        public async Task markovCount()
+        {
+            var count = MarkovService.GetTokenCount();
+            await ReplyAsync ($"{count} unique tokens in the markov model. Ronners!");    
         }
         
         [Command("userinfo")]
@@ -340,17 +379,17 @@ namespace Ronners.Bot.Modules
             return;
         }
 
-        [Command("stock")]
-        [Summary("Lookup a real stock price.\nUSAGE: !stock ['TICKER']")]
-        public async Task stockAsync(string ticker ="")
-        {
-            var quote = await StockService.GetStockPrice(ticker);
-            if(quote is null)
-            {
-                await ReplyAsync(string.Format("Failed to retrieve stock information for {0}",ticker));
-            }
-            await ReplyAsync("",false,CustomEmbeds.BuildEmbed(quote));
-        }
+        // [Command("stock")]
+        // [Summary("Lookup a real stock price.\nUSAGE: !stock ['TICKER']")]
+        // public async Task stockAsync(string ticker ="")
+        // {
+        //     var quote = await StockService.GetStockPrice(ticker);
+        //     if(quote is null)
+        //     {
+        //         await ReplyAsync(string.Format("Failed to retrieve stock information for {0}",ticker));
+        //     }
+        //     await ReplyAsync("",false,CustomEmbeds.BuildEmbed(quote));
+        // }
 
         [Command("book")]
         [Summary("Lookup a book.\nUSAGE: !book ['book query']")]
@@ -362,14 +401,6 @@ namespace Ronners.Bot.Modules
                 await ReplyAsync(string.Format("Failed to find a book matching: {0}",query));
             }
             await ReplyAsync("",false,CustomEmbeds.BuildEmbed(book));
-        }
-
-        [Command("attribution")]
-        [Summary("Real stock data source.\nUSAGE: !attribution")]
-        public async Task attributionAsync()
-        {
-            string response = string.Format("Stock Data provided by IEX Cloud https://iexcloud.io");
-            await ReplyAsync(response);
         }
 
         [Command("changelog")]

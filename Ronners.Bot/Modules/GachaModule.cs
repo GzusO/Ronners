@@ -48,7 +48,7 @@ namespace Ronners.Bot.Modules
         }
 
         [SlashCommand("buy","Buy random items from a collection")]
-        public async Task buyAsync(string collection, [MinValue(1)] int quantity)
+        public async Task buyAsync(string collectionName, [MinValue(1)] int quantity)
         {
             bool compactResult =false;
 
@@ -58,19 +58,21 @@ namespace Ronners.Bot.Modules
             if (quantity > 10)
                 compactResult = true;
 
-            var collections = await GameService.GetCollections();
-            if(collections.Where(x=> x.Name.ToLower() == collection.ToLower()).Count()==0)
+            var collections = (await GameService.GetCollections()).Where(x=>x.Name.ToLower() == collectionName.ToLower());
+
+            if(collections.Count() == 0)
             {
-                await RespondAsync($"Collection: {collection} doesn't exist.");
+                await RespondAsync($"Collection: {collectionName} doesn't exist.");
                 return;
             }
-            if(!await GameService.AddRonPoints(Context.User,-50*quantity))
+            var collection = collections.First();
+            if(!await GameService.AddRonPoints(Context.User,-1*collection.Cost*quantity))
             {
-                await RespondAsync($"Not Enough Points! Costs {50*quantity} RonPoints.");
+                await RespondAsync($"Not Enough Points! Costs {collection.Cost*quantity} RonPoints.");
                 return;
             }
-            var items = await GameService.PurchaseCollection(collection,quantity,Context.User);
-            items = items.OrderBy(x=> x.Rarity).ThenBy(x=> x.Name);   
+            var items = await GameService.PurchaseCollection(collectionName,quantity,Context.User);
+            items = items.OrderByDescending(x=> x.Rarity).ThenBy(x=> x.Name);   
 
             if(!compactResult)
             {

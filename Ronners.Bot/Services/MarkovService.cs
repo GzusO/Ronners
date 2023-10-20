@@ -15,15 +15,19 @@ namespace Ronners.Bot.Services
         private readonly Discord.WebSocket.DiscordSocketClient _discord;
         private Markov _markovModel;
         private readonly WebService _webService;
+        private readonly FishingService _fishingSerivce;
 
         private readonly Random _rand;
+        private readonly KeyService _keyService;
 
         public MarkovService(IServiceProvider services)
         {
             _discord = services.GetRequiredService<Discord.WebSocket.DiscordSocketClient>();
             _webService =services.GetRequiredService<WebService>();
             _rand = services.GetRequiredService<Random>();
+            _fishingSerivce = services.GetRequiredService<FishingService>();
             _markovModel = new Markov("markov.json");
+            _keyService = services.GetRequiredService<KeyService>();
         }
 
         public async Task MessageReceiveAsync(Discord.WebSocket.SocketMessage rawMessage)
@@ -31,6 +35,10 @@ namespace Ronners.Bot.Services
             if (!(rawMessage is SocketUserMessage message)) return;
             if (message.Source != Discord.MessageSource.User)
                 return;
+            if(rawMessage.Content.StartsWith("!"))
+                return;
+
+            
             addMessageToModel(message.Content);
             if (message.Attachments.Count > 0)
             {
@@ -48,8 +56,17 @@ namespace Ronners.Bot.Services
                     
                 }
             }
+
+            if(message.Author.Id == 146979125675032576)//Block squirtle
+                return;
+
             if(_rand.Next(0,100)==0 || (message.MentionedUsers.Where(x=> x.Id ==785642924011946004).Count() >0 && message.Author.Id != 997286497411678218))
-                await message.Channel.SendMessageAsync(GenerateMessage(""),false,null,null,null,new Discord.MessageReference(message.Id));
+            {
+                string markovMessage = GenerateMessage("");
+                markovMessage = _fishingSerivce.Fishify(markovMessage);
+                markovMessage = await _keyService.AddKey(markovMessage);
+                await message.Channel.SendMessageAsync(markovMessage,false,null,null,null,new Discord.MessageReference(message.Id));
+            }
         }
 
         private void addMessageToModel(string content)
@@ -79,6 +96,16 @@ namespace Ronners.Bot.Services
         public void Purge()
         {
             _markovModel.Purge();
+        }
+
+        public Dictionary<string,int> GetPossibleTokens(string token)
+        {
+            return _markovModel.GetProceedingWords(token);
+        }
+
+        internal object GetTokenCount()
+        {
+            return _markovModel.GetTotalTokens();
         }
     }
 }

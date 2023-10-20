@@ -43,6 +43,9 @@ namespace Ronners.Bot.Services
             if (message.Source != MessageSource.User) return;
             if (message.ReferencedMessage is null) return;
 
+            if(message.Author.Id == 146979125675032576)//Block squirtle
+                return;
+
             var achievementResult = AchievementResult.FromSuccess();
             achievementResult.AchievementType = AchievementType.Captcha;
             achievementResult.User = rawMessage.Author;

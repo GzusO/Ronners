@@ -10,6 +10,7 @@ namespace Ronners.Bot.Models
         public string Username{get;set;}
         public ulong PogCount {get;set;}
         public int RonPoints{get;set;}
+        public int Censors{get;set;}
 
         public User(ulong id, string username, ulong pogcount)
         {
@@ -17,6 +18,7 @@ namespace Ronners.Bot.Models
             Username = username;
             PogCount = pogcount;
             RonPoints = 0;
+            Censors =0;
         }
 
         public User(ulong id, string username, ulong pogcount,int ronpoints)
@@ -25,6 +27,7 @@ namespace Ronners.Bot.Models
             Username = username;
             PogCount = pogcount;
             RonPoints = ronpoints;
+            Censors =0;
         }
 
         public User()

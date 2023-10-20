@@ -21,6 +21,7 @@ namespace Ronners.Bot.Services
         private  List<ulong> _channels;
         private static string ImgPath;
         private PngEncoder _encoder;
+        private readonly Random _rand;
 
         public ImageService(IServiceProvider services)
         {
@@ -28,6 +29,7 @@ namespace Ronners.Bot.Services
             _game = services.GetRequiredService<GameService>();
             _services = services;
             _webService = services.GetRequiredService<WebService>();
+            _rand = services.GetRequiredService<Random>();
 
             _channels = ConfigService.Config.WhitelistedChannel;
             ImgPath =Path.Combine(Directory.GetCurrentDirectory(),ConfigService.Config.ImgFolder);
@@ -46,6 +48,8 @@ namespace Ronners.Bot.Services
             if(!_channels.Contains(message.Channel.Id))
                 return;
             if(!message.MentionedUsers.Any(p => p.Id == _discord.CurrentUser.Id))
+                return;
+            if(message.Author.Id == 146979125675032576)//Block squirtle
                 return;
 
             if (message.Attachments.Count > 0)
@@ -75,9 +79,28 @@ namespace Ronners.Bot.Services
                 
             return image;
         }
-        public Image<Rgba32> EdgeDetect(Stream stream)
+
+        public Image<Rgba32> Rotate(Image<Rgba32> image)
         {
-            var image = Image.Load<Rgba32>(stream);
+            image.Mutate(x=> x.Rotate(RotateMode.Rotate90));
+            return image;
+        }
+
+        public Image<Rgba32> Blur(Image<Rgba32> image)
+        {
+            image.Mutate(x=> x.GaussianBlur((float)_rand.NextDouble()));
+            return image;
+        }
+
+        public Image<Rgba32> Pixelate(Image<Rgba32> image)
+        {
+            image.Mutate(x=> x.Pixelate(_rand.Next(1,4)));
+            return image;
+        }
+
+        public Image<Rgba32> Hue(Image<Rgba32> image)
+        {
+            image.Mutate(x=> x.Hue(_rand.Next(0,361)));
             return image;
         }
 
@@ -85,6 +108,42 @@ namespace Ronners.Bot.Services
         {
             var image = Image.Load<Rgba32>(stream);
             image = EdgeDetect(image);
+            var filePath = Path.ChangeExtension(Path.Combine(ImgPath,fileName),"png");
+            image.SaveAsPngAsync(Path.Combine(filePath),_encoder);
+            image.Dispose();
+            return filePath;
+        }
+
+        internal string Ronify(Stream stream, string fileName)
+        {
+            var image = Image.Load<Rgba32>(stream);
+            var iterations = _rand.Next(3,8);
+
+            for(int i = 0;i<iterations;i++)
+            {
+                var task = _rand.Next(5);
+
+                switch (task)
+                {
+                    case 0:
+                        image = EdgeDetect(image);
+                        break;
+                    case 1:
+                        image = Rotate(image);
+                        break;
+                    case 2:
+                        image = Blur(image);
+                        break;
+                    case 3:
+                        image = Pixelate(image);
+                        break;
+                    case 4:
+                        image = Hue(image);
+                        break;
+                    default:
+                        break;
+                }
+            }
             var filePath = Path.ChangeExtension(Path.Combine(ImgPath,fileName),"png");
             image.SaveAsPngAsync(Path.Combine(filePath),_encoder);
             image.Dispose();

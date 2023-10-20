@@ -1,4 +1,5 @@
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -182,6 +183,30 @@ namespace Ronners.Bot.Models
             }
             
             return result;
+        }
+
+        public Dictionary<string,int> GetProceedingWords(string token)
+        {
+
+            if(!Chain.ContainsKey(token))
+            {
+                return new Dictionary<string, int>();
+            }
+            return Chain[token];
+        }
+
+        internal int GetTotalTokens()
+        {
+            var keys = new HashSet<string>();
+            foreach(var kvp in Chain)
+            {
+                foreach(var kvp2 in kvp.Value)
+                {
+                    keys.Add(kvp2.Key);
+                }
+                keys.Add(kvp.Key);
+            }
+            return keys.Count;
         }
     }   
 }

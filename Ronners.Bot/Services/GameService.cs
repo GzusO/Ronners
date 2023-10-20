@@ -10,6 +10,8 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
 using Discord.WebSocket;
+using SQLitePCL;
+using System.Linq;
 
 namespace Ronners.Bot.Services
 {
@@ -40,7 +42,7 @@ namespace Ronners.Bot.Services
 
         public async Task<int> InsertUser(User user)
         {
-            var cmd = "INSERT INTO users(userid,username,pogcount,ronpoints) values(@UserId,@Username,@PogCount,@RonPoints)";
+            var cmd = "INSERT INTO users(userid,username,pogcount,ronpoints,censors) values(@UserId,@Username,@PogCount,@RonPoints,0)";
             return await connection.ExecuteAsync(cmd, new {UserId = user.UserId, Username = user.Username, PogCount=user.PogCount, RonPoints=user.RonPoints});
         }
 
@@ -221,7 +223,7 @@ namespace Ronners.Bot.Services
 
         public async Task<IEnumerable<Collection>> GetCollections()
         {
-            var cmd = "SELECT DISTINCT Collection as Name, Count() as NumberOfItems from item GROUP BY Collection";
+            var cmd = "select DISTINCT c.collectionID,c.Name, Count() as NumberOfItems,c.Cost from collection c inner join item i on i.collectionID=c.collectionID group by c.collectionID";
             return await connection.QueryAsync<Collection>(cmd);
         }
         
@@ -292,7 +294,7 @@ namespace Ronners.Bot.Services
         public async Task<IEnumerable<Item>> PurchaseCollection(string collection, int quantity, IUser user)
         {
             var items = await GetItemsByCollection(collection);
-            var totalWeight = items.Sum(x=>x.RarityToWeight());
+            var totalWeight = items.Sum(x=>x.Rarity);
             var receivedItems = new List<Item>();
 
             for(int i = 0;i<quantity;i++)
@@ -313,12 +315,12 @@ namespace Ronners.Bot.Services
             Item selectedItem = null;
             foreach(var item in items)
             {
-                if(val < item.RarityToWeight())
+                if(val < item.Rarity)
                 {
                     selectedItem = item;
                     break;
                 }
-                val -= item.RarityToWeight();
+                val -= item.Rarity;
             }
             return selectedItem;
         }
@@ -355,6 +357,80 @@ namespace Ronners.Bot.Services
 
             return completedCollections;
 
+        }
+
+        internal async Task<int> GetUserUniqueItemsCollected(IUser user)
+        {
+            var items = await GetUsersItems(user);
+            return items.Count();
+        }
+
+
+        public async Task<int> AddFish(IUser user, Fish fish)
+        {
+            var cmd = "INSERT INTO fish(UserID,FishID,Weight,Length) VALUES(@Id, @FishID, @Weight, @Length)";
+            return await connection.ExecuteAsync(cmd, new{user.Id,fish.FishID,fish.Weight,fish.Length});
+        }
+
+        public async Task<IEnumerable<UserFish>> GetFishByUser(IUser user)
+        {
+            var cmd = "SELECT UserID, FishID, Weight, Length FROM Fish WHERE UserID = @Id";
+            IEnumerable<UserFish> records = await connection.QueryAsync<UserFish,Fish,UserFish>(cmd, (user, fish)=> {
+                user.Fish = fish;
+                return user;
+            },
+            new{user.Id},
+            splitOn:"FishID");
+
+            return records;
+        }
+
+        public async Task<IEnumerable<(ulong userID, int count)>> GetFishCount(int count)
+        {
+            var cmd = "SELECT UserID, Count(*) as Total FROM FISH Group By UserID ORDER BY Total desc LIMIT @count";
+            return await connection.QueryAsync<(ulong,int)>(cmd,new{count});
+        }
+
+
+        public async Task<RonKey> GetRonKey()
+        {
+            var cmd = "SELECT KeyID, Key, Source FROM ronkey WHERE Used = 0";
+            return await connection.QueryFirstOrDefaultAsync<RonKey>(cmd);
+        }
+
+        public async Task UseRonKey(int keyID)
+        {
+            var cmd = "UPDATE ronkey set Used = 1 where keyid=@keyID";
+            await connection.ExecuteAsync(cmd, new {keyID});
+        }
+
+        public async Task<int> AddKey(RonKey key)
+        {
+            var cmd = "INSERT INTO ronkey(UserID,Key,Source,Used) VALUES (@UserID,@Key,@Source,@Used)";
+            return await connection.ExecuteAsync(cmd, new{key.UserID,key.Key,key.Source,key.Used});
+        }
+
+        public async Task LogCensorship(IUser user)
+        {
+            if((await GetUserByID(user.Id))==null)
+            {
+                var u = new User(user.Id,user.Username,0,0);
+                await InsertUser(u);
+            }
+            var cmd = "UPDATE users set censors = censors+1 WHERE userid = @UserId";
+            await connection.ExecuteAsync(cmd, new{@UserId=user.Id});
+        }
+
+        public async Task<IEnumerable<ChannelModeration>>  GetModeratedChannels()
+        {
+            var cmd = "select ChannelID,ModerationLevel FROM channelModeration";
+            return await connection.QueryAsync<ChannelModeration>(cmd);
+        }
+
+        internal async Task AddModerationLevel(int level, ulong id)
+        {
+            var cmd = "INSERT INTO channelModeration(ChannelId,ModerationLevel) values (@id, @level)";
+            await connection.ExecuteAsync(cmd,new {id,level});
         }
     }
 }
